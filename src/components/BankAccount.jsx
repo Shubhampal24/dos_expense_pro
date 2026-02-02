@@ -126,15 +126,15 @@ const BankAccount = ({ currentUser }) => {
         ...formData,
         ifscCode: formData.ifscCode.toUpperCase(), // Ensure IFSC is uppercase
         balance: parseFloat(formData.balance) || 0,
-        userId: currentUser?.userId || currentUser?._id
+        userId: currentUser?.userId || currentUser?.id
       };
 
       let result;
       if (editingAccount) {
-        result = await bankAccountAPI.updateBankAccount(editingAccount._id, submitData);
+        result = await bankAccountAPI.updateBankAccount(editingAccount.id, submitData);
         setSuccess('Bank account updated successfully!');
         setAccounts(prev => prev.map(acc => 
-          acc._id === editingAccount._id ? result : acc
+          acc.id === editingAccount.id ? result : acc
         ));
       } else {
         result = await bankAccountAPI.addBankAccount(submitData);
@@ -173,7 +173,7 @@ const BankAccount = ({ currentUser }) => {
 
     try {
       await bankAccountAPI.deleteBankAccount(accountId);
-      setAccounts(prev => prev.filter(acc => acc._id !== accountId));
+      setAccounts(prev => prev.filter(acc => acc.id !== accountId));
       setSuccess('Bank account deleted successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
@@ -599,7 +599,7 @@ const BankAccount = ({ currentUser }) => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredAccounts.map((account, index) => (
-                        <tr key={account._id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                        <tr key={account.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                           <td className="px-4 py-4">
                             <div>
                               <div className="font-medium text-gray-900">
@@ -659,7 +659,7 @@ const BankAccount = ({ currentUser }) => {
                                 <FiEdit2 size={16} />
                               </button>
                               <button
-                                onClick={() => handleDelete(account._id)}
+                                onClick={() => handleDelete(account.id)}
                                 className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
                                 title="Delete account"
                               >

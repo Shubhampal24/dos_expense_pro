@@ -55,7 +55,7 @@ const HeadUserManagement = () => {
       // Try the new specific endpoint first since you've implemented it
       try {
         console.log('Trying the new /api/users/by-role?role=HEAD endpoint');
-        const response = await fetch(`${API_URL}/api/users/by-role?role=HEAD`, {
+        const response = await fetch(`${API_URL}/api/auth/by-role?role=HEAD`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'application/json'
@@ -91,8 +91,8 @@ const HeadUserManagement = () => {
       
       // Final fallback to direct API calls with better error handling
       const endpoints = [
-        `${API_URL}/api/users`, // Try the base users endpoint
-        `${API_URL}/api/users/all` // All users endpoint
+        `${API_URL}/api/auth`, // Try the base users endpoint
+        `${API_URL}/api/auth/all` // All users endpoint
       ];
       
       let headUsers = [];
@@ -231,7 +231,7 @@ const HeadUserManagement = () => {
       };
 
       // Use direct authenticated API call to the correct endpoint
-      const response = await fetch(`${API_URL}/api/users/register`, {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -272,7 +272,7 @@ const HeadUserManagement = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/users/${userId}`, {
+      const response = await fetch(`${API_URL}/api/auth/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -319,17 +319,31 @@ const HeadUserManagement = () => {
       setError('');
       
       // Use PATCH method for partial updates
-      const response = await fetch(`${API_URL}/api/users/update/${editingUser._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
+      const response = await fetch(`${API_URL}/api/auth/${editingUser.id}`, {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: formData.name,
+    email: formData.email,
+    mobileNumber: formData.mobileNumber,
+    aadharOrPanNumber: formData.aadharOrPanNumber,
+    status: formData.status,
+    loginId: formData.loginId || undefined,
+    pin: formData.pin || undefined,
+    role: 'HEAD',
+    regionIds: [],
+    branchIds: [],
+    centreIds: []
+  })
+});
+
 
       if (response.ok) {
         const result = await response.json();
+        console.log("Updated Head User response 👉", result);
         setSuccess('Head User updated successfully');
         setFormData({
           name: '',
@@ -736,7 +750,7 @@ const HeadUserManagement = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {headUsers.map((user, index) => (
-                        <tr key={user._id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                        <tr key={user.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -763,14 +777,14 @@ const HeadUserManagement = () => {
                                 <span className="text-xs text-gray-500">PIN:</span>
                                 <div className="flex items-center gap-1">
                                   <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium font-mono">
-                                    {(showPins || individualPinVisibility[user._id]) ? (user.pin || 'N/A') : '••••'}
+                                    {(showPins || individualPinVisibility[user.id]) ? (user.pin || 'N/A') : '••••'}
                                   </div>
                                   <button
-                                    onClick={() => toggleIndividualPinVisibility(user._id)}
+                                    onClick={() => toggleIndividualPinVisibility(user.id)}
                                     className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                                    title={(showPins || individualPinVisibility[user._id]) ? "Hide PIN" : "Show PIN"}
+                                    title={(showPins || individualPinVisibility[user.id]) ? "Hide PIN" : "Show PIN"}
                                   >
-                                    {(showPins || individualPinVisibility[user._id]) ? 
+                                    {(showPins || individualPinVisibility[user.id]) ? 
                                       <FiEyeOff size={12} /> : 
                                       <FiEye size={12} />
                                     }
@@ -798,7 +812,7 @@ const HeadUserManagement = () => {
                                 <FiEdit2 size={16} />
                               </button>
                               <button
-                                onClick={() => handleDeleteUser(user._id, user.name)}
+                                onClick={() => handleDeleteUser(user.id, user.name)}
                                 className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
                                 title="Delete user"
                               >

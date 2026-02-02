@@ -85,11 +85,28 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
     setCurrentUser(user);
     setIsDataLoading(true);
     getCentresWithDetails()
-      .then((data) => {
-        setCentres(data);
-      })
-      .catch(() => setCentres([]))
-      .finally(() => setIsDataLoading(false));
+  .then((data) => {
+    // ✅ NORMALIZE ONCE FOR AddExpense UI
+    const normalizedCentres = data.map(({ centre, branch, region }) => ({
+      id: centre.id,
+      name: centre.name,
+      centreId: centre.centreId,
+
+      branchId: {
+        id: branch?.id,
+        name: branch?.name,
+      },
+
+      regionId: {
+        id: region?.id,
+        name: region?.name,
+      },
+    }));
+
+    setCentres(normalizedCentres);
+  })
+  .catch(() => setCentres([]))
+  .finally(() => setIsDataLoading(false));
 
     // Fetch existing expenses
     fetchExpenses();
@@ -111,13 +128,13 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       const userBranchIds = currentUser.branchIds || [];
       const branches = centres.filter(
         (centre) =>
-          formData.regionIds.includes(centre.regionId?._id) &&
-          userBranchIds.includes(centre.branchId?._id)
+          formData.regionIds.includes(centre.regionId?.id) &&
+          userBranchIds.includes(centre.branchId?.id)
       );
       setFilteredBranches(branches);
 
       // Remove any branchIds that are no longer valid (not in any selected region or not accessible to user)
-      const validBranchIds = [...new Set(branches.map((c) => c.branchId?._id))];
+      const validBranchIds = [...new Set(branches.map((c) => c.branchId?.id))];
       const filteredBranchIds = formData.branchIds.filter((branchId) =>
         validBranchIds.includes(branchId)
       );
@@ -137,13 +154,13 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       const userCentreIds = currentUser.centreIds || [];
       const centresFiltered = centres.filter(
         (centre) =>
-          formData.branchIds.includes(centre.branchId?._id) &&
-          userCentreIds.includes(centre._id)
+          formData.branchIds.includes(centre.branchId?.id) &&
+          userCentreIds.includes(centre.id)
       );
       setFilteredCentres(centresFiltered);
 
       // Remove any centreIds that are no longer valid (not in any selected branch or not accessible to user)
-      const validCentreIds = centresFiltered.map((c) => c._id);
+      const validCentreIds = centresFiltered.map((c) => c.id);
       const filteredCentreIds = formData.centreIds.filter((centreId) =>
         validCentreIds.includes(centreId)
       );
@@ -194,11 +211,11 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       const token = localStorage.getItem("authToken");
       const decodedToken = token ? decodeToken(token) : null;
       userId =
-        decodedToken?._id ||
+        decodedToken?.id ||
         decodedToken?.userId ||
         decodedToken?.id ||
         decodedToken?.sub ||
-        currentUser?._id;
+        currentUser?.id;
       if (!userId) {
         setExpenses([]);
         setIsLoadingExpenses(false);
@@ -206,9 +223,13 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       }
       // Call the new endpoint
       const response = await adExpenseAPI.getAdExpensesByUserId(userId);
-      if (response && response.length > 0) {
-      }
-      setExpenses(response);
+      console.log("🧾 RAW getAdExpensesByUserId RESPONSE:", response);
+
+// ✅ CORRECT: table only needs IDs
+setExpenses(response || []);
+
+
+
       // console.log("Fetched expenses:", response);
     } catch (err) {
       console.error("Error fetching expenses:", err);
@@ -282,7 +303,7 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
           expense.paidTo?.toLowerCase().includes(searchLower) ||
           expense.reason?.toLowerCase().includes(searchLower) ||
           expense.amount?.toString().includes(searchLower) ||
-          expense._id?.slice(-6).toLowerCase().includes(searchLower);
+          expense.id?.slice(-6).toLowerCase().includes(searchLower);
 
         // Search in bank account
         const matchesBank =
@@ -349,14 +370,14 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
     const filteredRegions = (modalLocationData.regions || []).filter(
       (region) =>
         region.name?.toLowerCase().includes(searchLower) ||
-        region._id?.toLowerCase().includes(searchLower)
+        region.id?.toLowerCase().includes(searchLower)
     );
 
     // Filter branches/areas
     const filteredBranches = (modalLocationData.branches || []).filter(
       (branch) =>
         branch.name?.toLowerCase().includes(searchLower) ||
-        branch._id?.toLowerCase().includes(searchLower)
+        branch.id?.toLowerCase().includes(searchLower)
     );
 
     // Filter centres
@@ -364,7 +385,7 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       (centre) =>
         centre.name?.toLowerCase().includes(searchLower) ||
         centre.centreId?.toLowerCase().includes(searchLower) ||
-        centre._id?.toLowerCase().includes(searchLower)
+        centre.id?.toLowerCase().includes(searchLower)
     );
 
     setFilteredModalLocations({
@@ -475,11 +496,11 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       const token = localStorage.getItem("authToken");
       const decodedToken = token ? decodeToken(token) : null;
       const userId =
-        decodedToken?._id ||
+        decodedToken?.id ||
         decodedToken?.userId ||
         decodedToken?.id ||
         decodedToken?.sub ||
-        currentUser?._id;
+        currentUser?.id;
 
       const expenseData = {
         expenseDate: formData.expenseDate,
@@ -499,7 +520,7 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
 
       let response;
       if (isEditMode && editingExpense) {
-        response = await adExpenseAPI.updateAdExpense(editingExpense._id, expenseData);
+        response = await adExpenseAPI.updateAdExpense(editingExpense.id, expenseData);
         setSuccess("Expense updated successfully!");
       } else {
         response = await adExpenseAPI.addAdExpense(expenseData);
@@ -558,10 +579,10 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       TdsAmount: expense.TdsAmount ? expense.TdsAmount.toString() : "",
       noOfDays: expense.noOfDays ? expense.noOfDays.toString() : "",
       verified: expense.verified,
-      regionIds: expense.regionIds?.map(r => r._id) || [],
-      branchIds: expense.branchIds?.map(b => b._id) || [],
-      centreIds: expense.centreIds?.map(c => c._id) || [],
-      bankAccount: expense.bankAccount?._id || "",
+      regionIds: expense.regionIds?.map(r => r.id) || [],
+      branchIds: expense.branchIds?.map(b => b.id) || [],
+      centreIds: expense.centreIds?.map(c => c.id) || [],
+      bankAccount: expense.bankAccount?.id || "",
     });
 
     // Clear any previous messages
@@ -601,7 +622,7 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
     setError("");
 
     try {
-      await adExpenseAPI.deleteAdExpense(expenseToDelete._id);
+      await adExpenseAPI.deleteAdExpense(expenseToDelete.id);
 
       setSuccess("Expense deleted successfully!");
       setShowDeleteConfirm(false);
@@ -837,7 +858,7 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
                   {isEditMode ? 'Update' : 'Add'} <span className={`${isEditMode ? 'text-blue-500' : 'text-amber-500'}`}>Expense</span>
                 </h1>
                 <p className="text-sm text-gray-600">
-                  {isEditMode ? 'Update existing advertising expense entry' : 'Create new advertising expense entries'}
+                  {isEditMode ? 'Update existing advertising expense entry' : 'Create new advertising exCreate new advertising expense entries entries'}
                 </p>
                 {isEditMode && (
                   <div className="mt-2 flex items-center gap-2">

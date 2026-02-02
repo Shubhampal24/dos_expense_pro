@@ -370,16 +370,16 @@ const CentersPerformance = ({ data, title, searchTerm = '', sortBy = 'business',
                     </select>
                     
                     <select
-                        value={selectedCentre?.centre._id || ''}
+                        value={selectedCentre?.centre.id || ''}
                         onChange={(e) => {
-                            const centre = filteredAndSortedCentres.find(c => c.centre._id === e.target.value);
+                            const centre = filteredAndSortedCentres.find(c => c.centre.id === e.target.value);
                             setSelectedCentre(centre);
                         }}
                         className="px-3 py-1.5 border rounded-md border-zinc-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     >
                         <option value="">All Centers Overview</option>
                         {filteredAndSortedCentres.map(centre => (
-                            <option key={centre.centre._id} value={centre.centre._id}>
+                            <option key={centre.centre.id} value={centre.centre.id}>
                                 {centre.centre.name} ({centre.centre.centreId || 'N/A'})
                             </option>
                         ))}
@@ -511,7 +511,7 @@ const CentersPerformance = ({ data, title, searchTerm = '', sortBy = 'business',
                                                    performanceScore > 5 ? 'text-orange-600' : 'text-red-600';
 
                             return (
-                                <div key={centre.centre._id} className="bg-white rounded-lg p-3 hover:bg-gray-50 transition-all duration-200 border border-gray-200  hover:">
+                                <div key={centre.centre.id} className="bg-white rounded-lg p-3 hover:bg-gray-50 transition-all duration-200 border border-gray-200  hover:">
                                     {/* Compact Center Header */}
                                     <div className="flex items-center justify-between mb-2">
                                         <div>
@@ -763,7 +763,7 @@ const CentersPerformance = ({ data, title, searchTerm = '', sortBy = 'business',
                                 })
                                 .map((centre, index) => (
                                     <tr 
-                                        key={centre.centre._id} 
+                                        key={centre.centre.id} 
                                         className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
                                         onClick={() => setSelectedCentre(centre)}
                                     >

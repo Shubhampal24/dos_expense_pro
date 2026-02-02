@@ -148,7 +148,7 @@ const ExpenseForm = ({
               isLoading={isLoadingBanks}
               isDisabled={isLoadingBanks}
               options={bankAccounts.map((account) => ({
-                value: account._id,
+                value: account.id,
                 label: `${account.accountHolder} - ${account.bankName
                   } (****${account.accountNumber.slice(-4)})`,
                 account: account,
@@ -156,7 +156,7 @@ const ExpenseForm = ({
               value={
                 bankAccounts
                   .map((account) => ({
-                    value: account._id,
+                    value: account.id,
                     label: `${account.accountHolder} - ${account.bankName
                       } (****${account.accountNumber.slice(-4)})`,
                     account: account,
@@ -241,12 +241,12 @@ const ExpenseForm = ({
           </div>
           {formData.bankAccount &&
             bankAccounts.find(
-              (acc) => acc._id === formData.bankAccount
+              (acc) => acc.id === formData.bankAccount
             ) && (
               <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                 {(() => {
                   const selectedAccount = bankAccounts.find(
-                    (acc) => acc._id === formData.bankAccount
+                    (acc) => acc.id === formData.bankAccount
                   );
                   return (
                     <div className="text-sm">

@@ -209,8 +209,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
             : [regionsData.value];
           setAvailableRegions(
             regions.map((region) => ({
-              id: region._id || region.id,
-              _id: region._id || region.id,
+              id: region.id || region.id,
+              id: region.id || region.id,
               name: region.name,
               short_code: region.short_code || region.shortCode,
               shortCode: region.shortCode || region.short_code,
@@ -225,11 +225,11 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
             : [branchesData.value];
           setAvailableBranches(
             branches.map((branch) => ({
-              id: branch._id || branch.id,
-              _id: branch._id || branch.id,
+              id: branch.id || branch.id,
+              id: branch.id || branch.id,
               name: branch.name,
               shortCode: branch.shortCode || branch.short_code,
-              regionId: branch.regionId?._id || branch.regionId,
+              regionId: branch.regionId?.id || branch.regionId,
               regionName: branch.regionName,
             }))
           );
@@ -242,12 +242,12 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
             : [centresData.value];
           setAvailableCentres(
             centres.map((centre) => ({
-              id: centre._id || centre.id,
-              _id: centre._id || centre.id,
+              id: centre.id || centre.id,
+              id: centre.id || centre.id,
               name: centre.name,
               shortCode: centre.shortCode || centre.short_code,
-              branchId: centre.branchId?._id || centre.branchId,
-              regionId: centre.regionId?._id || centre.regionId,
+              branchId: centre.branchId?.id || centre.branchId,
+              regionId: centre.regionId?.id || centre.regionId,
               branchName: centre.branchName,
               regionName: centre.regionName,
             }))
@@ -367,70 +367,63 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
   };
 
   const processDetailedCentresDataWithFiltering = async (centresData) => {
-  
-    // Process centers data
-    const centres = centresData.map((centre) => ({
-      id: centre._id || centre.id,
-      _id: centre._id || centre.id,
-      name: centre.name,
-      centreId: centre.centreId,
-      shortCode: centre.shortCode || centre.short_code,
-      branchId: centre.branchId?._id || centre.branchId,
-      regionId: centre.regionId?._id || centre.regionId,
-      branchName: centre.branchName || centre.branchId?.name,
-      regionName: centre.regionName || centre.regionId?.name,
-    }));
 
-    // Store all centres for filtering
-    setAllCentres(centres);
-    setAvailableCentres(centres);
+  // ✅ FLATTEN BACKEND RESPONSE
+  const centres = centresData.map(({ centre, branch, region }) => ({
+    id: centre.id,
+    id: centre.id,
+    name: centre.name,
+    centreId: centre.centreId,
+    shortCode: centre.shortCode,
 
-    // Extract unique branches
-    const branchesMap = new Map();
-    centresData.forEach((centre) => {
-      const branchId = centre.branchId?._id || centre.branchId;
-      const branchName = centre.branchName || centre.branchId?.name;
-      const branchShortCode =
-        centre.branchId?.shortCode || centre.branchId?.short_code;
-      const regionId = centre.regionId?._id || centre.regionId;
+    branchId: branch?.id || null,
+    branchName: branch?.name || null,
+    branchShortCode: branch?.shortCode || null,
 
-      if (branchId && branchName) {
-        branchesMap.set(branchId, {
-          id: branchId,
-          _id: branchId,
-          name: branchName,
-          shortCode: branchShortCode,
-          regionId: regionId,
-        });
-      }
-    });
-    const branches = Array.from(branchesMap.values());
+    regionId: region?.id || null,
+    regionName: region?.name || null,
+    regionShortCode: region?.shortCode || null,
+  }));
 
-    // Store all branches for filtering
-    setAllBranches(branches);
-    setAvailableBranches(branches);
+  // ✅ same as your existing logic
+  setAllCentres(centres);
+  setAvailableCentres(centres);
 
-    // Extract unique regions
-    const regionsMap = new Map();
-    centresData.forEach((centre) => {
-      const regionId = centre.regionId?._id || centre.regionId;
-      const regionName = centre.regionName || centre.regionId?.name;
-      const regionShortCode =
-        centre.regionId?.short_code || centre.regionId?.shortCode;
+  // -------- BRANCHES ----------
+  const branchesMap = new Map();
+  centres.forEach((c) => {
+    if (c.branchId && c.branchName) {
+      branchesMap.set(c.branchId, {
+        id: c.branchId,
+        id: c.branchId,
+        name: c.branchName,
+        shortCode: c.branchShortCode,
+        regionId: c.regionId,
+      });
+    }
+  });
 
-      if (regionId && regionName) {
-        regionsMap.set(regionId, {
-          id: regionId,
-          _id: regionId,
-          name: regionName,
-          short_code: regionShortCode,
-          shortCode: regionShortCode,
-        });
-      }
-    });
-    const regions = Array.from(regionsMap.values());
-    setAvailableRegions(regions);
-  };
+  const branches = Array.from(branchesMap.values());
+  setAllBranches(branches);
+  setAvailableBranches(branches);
+
+  // -------- REGIONS ----------
+  const regionsMap = new Map();
+  centres.forEach((c) => {
+    if (c.regionId && c.regionName) {
+      regionsMap.set(c.regionId, {
+        id: c.regionId,
+        id: c.regionId,
+        name: c.regionName,
+        shortCode: c.regionShortCode,
+      });
+    }
+  });
+
+  const regions = Array.from(regionsMap.values());
+  setAvailableRegions(regions);
+};
+
 
   const loadMockData = async () => {
     const mockCentres = [
@@ -488,7 +481,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
     try {
       // API call to update user access
       
-      const userId = userDetails.userId || userDetails._id;
+      const userId = userDetails.userId || userDetails.id || userDetails.id;
+
       if (!userId) {
         throw new Error("User ID not found");
       }
@@ -501,8 +495,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
 
 
       // Make API call to update user
-      const token = localStorage.getItem('token');
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'https://backend.st9.in'}/api/users/${userId}`;
+      const token = localStorage.getItem('authToken');
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'https://backend.st9.in'}/api/auth/${userId}`;
     
 
       const response = await fetch(apiUrl, {
@@ -595,7 +589,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
     setEditedUser((prev) => {
       const field = `${type}Ids`;
       const currentIds = prev[field] || [];
-      const newIds = filteredOptions.map((option) => option._id || option.id);
+      const newIds = filteredOptions.map((option) => option.id || option.id);
       const combinedIds = [...new Set([...currentIds, ...newIds])];
 
       const updatedUser = {
@@ -618,7 +612,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
       const field = `${type}Ids`;
       const currentIds = prev[field] || [];
       const idsToRemove = filteredOptions.map(
-        (option) => option._id || option.id
+        (option) => option.id || option.id
       );
       const remainingIds = currentIds.filter((id) => !idsToRemove.includes(id));
 
@@ -726,11 +720,11 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
     const getSelectedItemsGrouped = () => {
       if (type === 'branch' && assignedIds.length > 0) {
         // Group branches by region
-        const selectedBranches = options.filter(branch => assignedIds.includes(branch._id || branch.id));
+        const selectedBranches = options.filter(branch => assignedIds.includes(branch.id || branch.id));
         const groupedByRegion = {};
         
         selectedBranches.forEach(branch => {
-          const region = availableRegions.find(r => (r._id || r.id) === branch.regionId);
+          const region = availableRegions.find(r => (r.id || r.id) === branch.regionId);
           const regionName = region ? region.name : 'Unknown Region';
           const regionCode = region ? (region.shortCode || region.short_code || '') : '';
           const displayName = regionCode ? `${regionName} (${regionCode})` : regionName;
@@ -744,12 +738,12 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
         return groupedByRegion;
       } else if (type === 'centre' && assignedIds.length > 0) {
         // Group centres by branch and region
-        const selectedCentres = options.filter(centre => assignedIds.includes(centre._id || centre.id));
+        const selectedCentres = options.filter(centre => assignedIds.includes(centre.id || centre.id));
         const groupedByBranch = {};
         
         selectedCentres.forEach(centre => {
-          const branch = allBranches.find(b => (b._id || b.id) === centre.branchId);
-          const region = availableRegions.find(r => (r._id || r.id) === centre.regionId);
+          const branch = allBranches.find(b => (b.id || b.id) === centre.branchId);
+          const region = availableRegions.find(r => (r.id || r.id) === centre.regionId);
           
           const branchName = branch ? branch.name : 'Unknown Branch';
           const regionName = region ? region.name : 'Unknown Region';
@@ -847,7 +841,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {items.map((item) => (
-                    <div key={item._id || item.id} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-600 ">
+                    <div key={item.id || item.id} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-600 ">
                       <FiCheck className="text-green-500 text-sm flex-shrink-0 mr-1" />
                       <span className="truncate max-w-20" title={item.name}>
                         {item.name}
@@ -875,8 +869,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
           <div className="space-y-1 mb-4 border border-green-200 rounded-md p-2 bg-zinc-50">
             <h5 className="text-xs font-medium text-green-700 uppercase tracking-wide">Selected {title}</h5>
             <div className="flex flex-wrap gap-1">
-              {options.filter(option => assignedIds.includes(option._id || option.id)).map((option) => (
-                <div key={option._id || option.id} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-600 ">
+              {options.filter(option => assignedIds.includes(option.id || option.id)).map((option) => (
+                <div key={option.id || option.id} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-600 ">
                   <FiCheck className="text-green-500 text-xs flex-shrink-0 mr-1" />
                   <span className="truncate max-w-20" title={option.name}>
                     {option.name}
@@ -936,7 +930,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                       const grouped = {};
                       if (type === 'branch') {
                         filteredOptions.forEach(branch => {
-                          const region = availableRegions.find(r => (r._id || r.id) === branch.regionId);
+                          const region = availableRegions.find(r => (r.id || r.id) === branch.regionId);
                           const regionName = region ? region.name : 'Unknown Region';
                           const regionCode = region ? (region.shortCode || region.short_code || '') : '';
                           const groupKey = regionCode ? `${regionName} (${regionCode})` : regionName;
@@ -944,8 +938,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                         });
                       } else if (type === 'centre') {
                         filteredOptions.forEach(centre => {
-                          const branch = allBranches.find(b => (b._id || b.id) === centre.branchId);
-                          const region = availableRegions.find(r => (r._id || r.id) === centre.regionId);
+                          const branch = allBranches.find(b => (b.id || b.id) === centre.branchId);
+                          const region = availableRegions.find(r => (r.id || r.id) === centre.regionId);
                           const branchName = branch ? branch.name : 'Unknown Branch';
                           const regionName = region ? region.name : 'Unknown Region';
                           const branchCode = branch ? (branch.shortCode || branch.short_code || '') : '';
@@ -971,7 +965,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                         const grouped = {};
                         if (type === 'branch') {
                           filteredOptions.forEach(branch => {
-                            const region = availableRegions.find(r => (r._id || r.id) === branch.regionId);
+                            const region = availableRegions.find(r => (r.id || r.id) === branch.regionId);
                             const regionName = region ? region.name : 'Unknown Region';
                             const regionCode = region ? (region.shortCode || region.short_code || '') : '';
                             const groupKey = regionCode ? `${regionName} (${regionCode})` : regionName;
@@ -979,8 +973,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                           });
                         } else if (type === 'centre') {
                           filteredOptions.forEach(centre => {
-                            const branch = allBranches.find(b => (b._id || b.id) === centre.branchId);
-                            const region = availableRegions.find(r => (r._id || r.id) === centre.regionId);
+                            const branch = allBranches.find(b => (b.id || b.id) === centre.branchId);
+                            const region = availableRegions.find(r => (r.id || r.id) === centre.regionId);
                             const branchName = branch ? branch.name : 'Unknown Branch';
                             const regionName = region ? region.name : 'Unknown Region';
                             const branchCode = branch ? (branch.shortCode || branch.short_code || '') : '';
@@ -1016,7 +1010,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                       
                       if (type === 'branch') {
                         filteredOptions.forEach(branch => {
-                          const region = availableRegions.find(r => (r._id || r.id) === branch.regionId);
+                          const region = availableRegions.find(r => (r.id || r.id) === branch.regionId);
                           const regionName = region ? region.name : 'Unknown Region';
                           const regionCode = region ? (region.shortCode || region.short_code || '') : '';
                           const groupKey = regionCode ? `${regionName} (${regionCode})` : regionName;
@@ -1026,8 +1020,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                         });
                       } else if (type === 'centre') {
                         filteredOptions.forEach(centre => {
-                          const branch = allBranches.find(b => (b._id || b.id) === centre.branchId);
-                          const region = availableRegions.find(r => (r._id || r.id) === centre.regionId);
+                          const branch = allBranches.find(b => (b.id || b.id) === centre.branchId);
+                          const region = availableRegions.find(r => (r.id || r.id) === centre.regionId);
                           
                           const branchName = branch ? branch.name : 'Unknown Branch';
                           const regionName = region ? region.name : 'Unknown Region';
@@ -1063,7 +1057,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                           {!isGroupCollapsed(groupName) && (
                             <div className="flex flex-wrap gap-1">
                               {groupItems.map((option) => {
-                                const optionId = option._id || option.id;
+                                const optionId = option.id || option.id;
                                 const isSelected = assignedIds.includes(optionId);
                                 const displayName = option.name;
                                 const shortCode = (type === 'centre' && (option.centreId || option.shortCode || option.short_code)) 
@@ -1105,7 +1099,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                     // Simple flat display for regions
                     <div className="flex flex-wrap gap-1">
                       {filteredOptions.map((option) => {
-                        const optionId = option._id || option.id;
+                        const optionId = option.id || option.id;
                         const isSelected = assignedIds.includes(optionId);
                         const displayName = option.name;
                         const shortCode = option.shortCode || option.short_code || '';
@@ -1168,7 +1162,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                     {/* Compact Capsule design for selected items */}
                     <div className="flex flex-wrap gap-1">
                       {items.map((item) => {
-                        const optionId = item._id || item.id;
+                        const optionId = item.id || item.id;
                         const isSelected = assignedIds.includes(optionId);
                         const displayName = item.name;
                         const shortCode = (type === 'centre' && (item.centreId || item.shortCode || item.short_code)) 
@@ -1217,8 +1211,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                 </h5>
                 <div className="border border-green-600 rounded-lg bg-green-100 p-2">
                   <div className="flex flex-wrap gap-1">
-                    {options.filter(option => assignedIds.includes(option._id || option.id)).map((option) => {
-                      const optionId = option._id || option.id;
+                    {options.filter(option => assignedIds.includes(option.id || option.id)).map((option) => {
+                      const optionId = option.id || option.id;
                       const displayName = option.name;
                       const shortCode = option.shortCode || option.short_code || '';
                       

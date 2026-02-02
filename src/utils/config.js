@@ -5,7 +5,7 @@ export const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://backend.st9
 export const API_ENDPOINTS = {
   // Auth endpoints
   AUTH: {
-    LOGIN: '/api/users/login2',
+    LOGIN: '/api/auth/login',
     LOGOUT: '/api/auth/logout',
     USER: '/api/auth/user',
     CHANGE_PIN: '/api/auth/change-pin',
@@ -26,12 +26,12 @@ export const API_ENDPOINTS = {
   },
   // Advertising Expense endpoints
   AD_EXPENSES: {
-    BASE: '/api/adExpense',
-    GET_ALL: '/api/adExpense',
-    CREATE: '/api/adExpense',
-    UPDATE: '/api/adExpense',
-    DELETE: '/api/adExpense',
-    GET_BY_CENTRE: '/api/adExpense/centre',
+    BASE: '/api/adExpenses',
+    GET_ALL: '/api/adExpenses',
+    CREATE: '/api/adExpenses',
+    UPDATE: '/api/adExpenses',
+    DELETE: '/api/adExpenses',
+    GET_BY_CENTRE: '/api/adExpenses/centre',
     SSE: '/api/adExpense/sse'
   },
   // Bank Account endpoints

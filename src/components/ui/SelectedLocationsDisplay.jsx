@@ -57,21 +57,21 @@ const SelectedLocationsDisplay = ({
       <div className="space-y-2">
         {/* Selected Regions Display */}
         {formData.regionIds.map((regionId) => {
-          const region = centres.find((c) => c.regionId?._id === regionId)?.regionId;
+          const region = centres.find((c) => c.regionId?.id === regionId)?.regionId;
           if (!region) return null;
 
           const branchesInRegion = centres
-            .filter((centre) => centre.regionId?._id === regionId)
+            .filter((centre) => centre.regionId?.id === regionId)
             .reduce((acc, centre) => {
-              if (centre.branchId && !acc.find((b) => b._id === centre.branchId._id)) {
+              if (centre.branchId && !acc.find((b) => b.id === centre.branchId.id)) {
                 acc.push(centre.branchId);
               }
               return acc;
             }, []);
 
-          const selectedBranches = branchesInRegion.filter((branch) => formData.branchIds.includes(branch._id));
-          const centresInRegion = centres.filter((centre) => centre.regionId?._id === regionId);
-          const selectedCentres = centresInRegion.filter((centre) => formData.centreIds.includes(centre._id));
+          const selectedBranches = branchesInRegion.filter((branch) => formData.branchIds.includes(branch.id));
+          const centresInRegion = centres.filter((centre) => centre.regionId?.id === regionId);
+          const selectedCentres = centresInRegion.filter((centre) => formData.centreIds.includes(centre.id));
 
           return (
             <div key={regionId} className="border border-gray-200 rounded p-2 bg-white">
@@ -104,11 +104,11 @@ const SelectedLocationsDisplay = ({
                 <div className="ml-2 mt-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 max-h-40 overflow-y-auto">
                     {selectedBranches.map((branch) => {
-                      const centresInBranch = centresInRegion.filter((centre) => centre.branchId?._id === branch._id);
-                      const selectedCentresInBranch = centresInBranch.filter((centre) => formData.centreIds.includes(centre._id));
+                      const centresInBranch = centresInRegion.filter((centre) => centre.branchId?.id === branch.id);
+                      const selectedCentresInBranch = centresInBranch.filter((centre) => formData.centreIds.includes(centre.id));
 
                       return (
-                        <div key={branch._id} className="border border-blue-200 rounded-lg p-2 bg-blue-50">
+                        <div key={branch.id} className="border border-blue-200 rounded-lg p-2 bg-blue-50">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-1">
                               <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
@@ -123,7 +123,7 @@ const SelectedLocationsDisplay = ({
                               onClick={() => {
                                 setFormData((prev) => ({
                                   ...prev,
-                                  branchIds: prev.branchIds.filter((id) => id !== branch._id),
+                                  branchIds: prev.branchIds.filter((id) => id !== branch.id),
                                 }));
                               }}
                               className="text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded px-1"
@@ -136,7 +136,7 @@ const SelectedLocationsDisplay = ({
                           {selectedCentresInBranch.length > 0 && (
                             <div className="space-y-1 max-h-24 overflow-y-auto">
                               {selectedCentresInBranch.map((centre) => (
-                                <div key={centre._id} className="flex items-center justify-between bg-white rounded px-2 py-1 border border-gray-200">
+                                <div key={centre.id} className="flex items-center justify-between bg-white rounded px-2 py-1 border border-gray-200">
                                   <div className="flex items-center gap-1 min-w-0 flex-1">
                                     <span className="text-green-600 text-xs">🏪</span>
                                     <span className="text-xs font-medium text-gray-800 truncate">{centre.name}</span>
@@ -147,7 +147,7 @@ const SelectedLocationsDisplay = ({
                                     onClick={() => {
                                       setFormData((prev) => ({
                                         ...prev,
-                                        centreIds: prev.centreIds.filter((id) => id !== centre._id),
+                                        centreIds: prev.centreIds.filter((id) => id !== centre.id),
                                       }));
                                     }}
                                     className="text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full w-4 h-4 flex items-center justify-center text-xs ml-1"

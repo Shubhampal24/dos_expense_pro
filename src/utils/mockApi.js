@@ -2,7 +2,7 @@
 // Replace with actual API calls when backend is ready
 
 const DEMO_USER = {
-  _id: '1',
+  id: '1',
   loginId: 'demo123',
   name: 'Demo User',
   role: 'user',

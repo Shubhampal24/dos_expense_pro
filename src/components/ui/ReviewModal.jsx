@@ -78,12 +78,12 @@ const ReviewModal = ({
                 </div>
               </div>
               {formData.bankAccount &&
-                bankAccounts.find((acc) => acc._id === formData.bankAccount) && (
+                bankAccounts.find((acc) => acc.id === formData.bankAccount) && (
                   <div className="col-span-2">
                     <span className="text-gray-600 block">Bank Account:</span>
                     {(() => {
                       const selectedAccount = bankAccounts.find(
-                        (acc) => acc._id === formData.bankAccount
+                        (acc) => acc.id === formData.bankAccount
                       );
                       return (
                         <div className="font-medium text-blue-700 bg-blue-50 p-2 rounded border">
@@ -171,13 +171,13 @@ const ReviewModal = ({
                   {formData.regionIds.map((regionId) => {
                     const region = centres
                       .map((c) => c.regionId)
-                      .find((r) => r && r._id === regionId);
+                      .find((r) => r && r.id === regionId);
                     return region ? (
                       <span
-                        key={region._id}
+                        key={region.id}
                         className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded"
                       >
-                        {region.name} ({region.short_code})
+                        {region.name}
                       </span>
                     ) : (
                       <span
@@ -202,13 +202,13 @@ const ReviewModal = ({
                   {formData.branchIds.map((branchId) => {
                     const branch = centres
                       .map((c) => c.branchId)
-                      .find((b) => b && b._id === branchId);
+                      .find((b) => b && b.id === branchId);
                     return branch ? (
                       <span
-                        key={branch._id}
+                        key={branch.id}
                         className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
                       >
-                        {branch.name} ({branch.shortCode})
+                        {branch.name}
                       </span>
                     ) : (
                       <span
@@ -231,10 +231,10 @@ const ReviewModal = ({
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {formData.centreIds.map((centreId) => {
-                    const centre = centres.find((c) => c._id === centreId);
+                    const centre = centres.find((c) => c.id === centreId);
                     return centre ? (
                       <span
-                        key={centre._id}
+                        key={centre.id}
                         className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded"
                         title={`Centre: ${centre.name} | Short Code: ${centre.shortCode}`}
                       >
@@ -284,14 +284,18 @@ const ReviewModal = ({
               Edit Details
             </button>
             <button
-              onClick={handleConfirmSubmit}
-              disabled={isLoading}
-              className={`px-6 py-2 ${
-                isEditMode
-                  ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:ring-blue-400"
-                  : "bg-gradient-to-r from-orange-400 to-amber-400 hover:from-orange-500 hover:to-amber-500 focus:ring-amber-400"
-              } text-white font-semibold rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2`}
-            >
+  onClick={() => {
+    console.log("REVIEW MODAL formData 👉", formData);
+    handleConfirmSubmit();
+  }}
+  disabled={isLoading}
+  className={`px-6 py-2 ${
+    isEditMode
+      ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:ring-blue-400"
+      : "bg-gradient-to-r from-orange-400 to-amber-400 hover:from-orange-500 hover:to-amber-500 focus:ring-amber-400"
+  } text-white font-semibold rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2`}
+>
+
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

@@ -1,6 +1,7 @@
 import { FiAlertTriangle } from "react-icons/fi";
 import { MapPinIcon, XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
 import Select from "react-select";
+import { useEffect, useRef } from "react";
 
 const LocationSelector = ({
   formData,
@@ -13,6 +14,63 @@ const LocationSelector = ({
   accessDeniedEntries,
   setShowAccessDeniedModal,
 }) => {
+
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+  if (restoredRef.current) return;
+  if (!centres || centres.length === 0) return;
+
+  const saved = localStorage.getItem("locationSelection");
+  if (!saved) return;
+
+  try {
+    const parsed = JSON.parse(saved);
+
+    setFormData((prev) => ({
+      ...prev,
+      regionIds: parsed.regionIds || [],
+      branchIds: parsed.branchIds || [],
+      centreIds: parsed.centreIds || [],
+    }));
+
+    restoredRef.current = true;
+  } catch (e) {
+    console.error("Invalid locationSelection in localStorage");
+  }
+}, [centres]);
+
+
+// console.log("LocationSelector centres 👉", centres);
+// useEffect(() => {
+//   const saved = localStorage.getItem("locationSelection");
+//   if (saved) {
+//     try {
+//       const parsed = JSON.parse(saved);
+//       setFormData((prev) => ({
+//         ...prev,
+//         regionIds: parsed.regionIds || [],
+//         branchIds: parsed.branchIds || [],
+//         centreIds: parsed.centreIds || [],
+//       }));
+//     } catch (e) {
+//       console.error("Invalid locationSelection in localStorage");
+//     }
+//   }
+// }, []);
+
+useEffect(() => {
+  localStorage.setItem(
+    "locationSelection",
+    JSON.stringify({
+      regionIds: formData.regionIds,
+      branchIds: formData.branchIds,
+      centreIds: formData.centreIds,
+    })
+  );
+}, [formData.regionIds, formData.branchIds, formData.centreIds]);
+
+
   return (
     <div>
       {/* Access Denied Warning */}
@@ -56,10 +114,10 @@ const LocationSelector = ({
           value={
             formData.centreIds
               ?.map((centreId) => {
-                const centre = centres.find(c => c._id === centreId);
+                const centre = centres.find(c => c.id === centreId);
                 if (!centre) return null;
                 return {
-                  value: centre._id,
+                  value: centre.id,
                   label: `${centre.name} (${centre.centreId}) - ${centre.branchId?.name} - ${centre.regionId?.name}`,
                   centreData: centre
                 };
@@ -75,9 +133,9 @@ const LocationSelector = ({
               selectedOptions.forEach(option => {
                 if (option?.centreData) {
                   const centre = option.centreData;
-                  if (centre.regionId?._id) uniqueRegionIds.add(centre.regionId._id);
-                  if (centre.branchId?._id) uniqueBranchIds.add(centre.branchId._id);
-                  if (centre._id) uniqueCentreIds.add(centre._id);
+                  if (centre.regionId?.id) uniqueRegionIds.add(centre.regionId.id);
+                  if (centre.branchId?.id) uniqueBranchIds.add(centre.branchId.id);
+                  if (centre.id) uniqueCentreIds.add(centre.id);
                 }
               });
 
@@ -99,10 +157,10 @@ const LocationSelector = ({
           options={
             currentUser?.centreIds
               ?.map((centreId) => {
-                const centre = centres.find(c => c._id === centreId);
+                const centre = centres.find(c => c.id === centreId);
                 if (!centre) return null;
                 return {
-                  value: centre._id,
+                  value: centre.id,
                   label: `${centre.name} (${centre.centreId}) - ${centre.branchId?.name} - ${centre.regionId?.name}`,
                   centreData: centre
                 };
@@ -157,15 +215,15 @@ const LocationSelector = ({
                 onClick={() => {
                   const allCentreIds = currentUser?.centreIds || [];
                   const allCentres = allCentreIds
-                    .map(id => centres.find(c => c._id === id))
+                    .map(id => centres.find(c => c.id === id))
                     .filter(Boolean);
 
                   const uniqueRegionIds = new Set();
                   const uniqueBranchIds = new Set();
 
                   allCentres.forEach(centre => {
-                    if (centre.regionId?._id) uniqueRegionIds.add(centre.regionId._id);
-                    if (centre.branchId?._id) uniqueBranchIds.add(centre.branchId._id);
+                    if (centre.regionId?.id) uniqueRegionIds.add(centre.regionId.id);
+                    if (centre.branchId?.id) uniqueBranchIds.add(centre.branchId.id);
                   });
 
                   setFormData((prev) => ({
@@ -222,14 +280,14 @@ const LocationSelector = ({
             options={(() => {
               const userRegionIds = currentUser?.regionIds || [];
               const accessibleCentres = centres.filter(
-                (c) => c.regionId && userRegionIds.includes(c.regionId._id)
+                (c) => c.regionId && userRegionIds.includes(c.regionId.id)
               );
               const allRegions = Array.from(
-                new Set(accessibleCentres.map((c) => c.regionId?._id))
+                new Set(accessibleCentres.map((c) => c.regionId?.id))
               )
                 .map((regionId) => {
                   const region = accessibleCentres.find(
-                    (c) => c.regionId?._id === regionId
+                    (c) => c.regionId?.id === regionId
                   )?.regionId;
                   return region
                     ? {
@@ -245,7 +303,7 @@ const LocationSelector = ({
               const selectedRegions = formData.regionIds
                 .map((regionId) => {
                   const region = accessibleCentres.find(
-                    (c) => c.regionId?._id === regionId
+                    (c) => c.regionId?.id === regionId
                   )?.regionId;
                   return region
                     ? {
@@ -263,7 +321,7 @@ const LocationSelector = ({
               );
               return [...selectedRegions, ...availableRegions];
             })()}
-            value={null}
+            
             onChange={(selected) => {
               if (selected) {
                 if (selected.isSelected) {
@@ -362,13 +420,13 @@ const LocationSelector = ({
                 (c) =>
                   c.regionId &&
                   c.branchId &&
-                  formData.regionIds.includes(c.regionId._id) &&
-                  userBranchIds.includes(c.branchId._id)
+                  formData.regionIds.includes(c.regionId.id) &&
+                  userBranchIds.includes(c.branchId.id)
               );
-              const allAreas = Array.from(new Set(allowedBranches.map((c) => c.branchId?._id)))
+              const allAreas = Array.from(new Set(allowedBranches.map((c) => c.branchId?.id)))
                 .map((branchId) => {
-                  const branch = allowedBranches.find((c) => c.branchId?._id === branchId)?.branchId;
-                  const region = allowedBranches.find((c) => c.branchId?._id === branchId)?.regionId;
+                  const branch = allowedBranches.find((c) => c.branchId?.id === branchId)?.branchId;
+                  const region = allowedBranches.find((c) => c.branchId?.id === branchId)?.regionId;
                   return branch
                     ? {
                       value: branchId,
@@ -382,8 +440,8 @@ const LocationSelector = ({
 
               const selectedAreas = formData.branchIds
                 .map((branchId) => {
-                  const branch = allowedBranches.find((c) => c.branchId?._id === branchId)?.branchId;
-                  const region = allowedBranches.find((c) => c.branchId?._id === branchId)?.regionId;
+                  const branch = allowedBranches.find((c) => c.branchId?.id === branchId)?.branchId;
+                  const region = allowedBranches.find((c) => c.branchId?.id === branchId)?.regionId;
                   return branch
                     ? {
                       value: branchId,
@@ -408,7 +466,7 @@ const LocationSelector = ({
 
               return [...(selectAllOption ? [selectAllOption] : []), ...selectedAreas, ...availableAreas];
             })()}
-            value={null}
+            
             onChange={(selected) => {
               if (selected) {
                 if (selected.isSelectAll) {
@@ -417,10 +475,10 @@ const LocationSelector = ({
                     (c) =>
                       c.regionId &&
                       c.branchId &&
-                      formData.regionIds.includes(c.regionId._id) &&
-                      userBranchIds.includes(c.branchId._id)
+                      formData.regionIds.includes(c.regionId.id) &&
+                      userBranchIds.includes(c.branchId.id)
                   );
-                  const allAreaIds = Array.from(new Set(allowedBranches.map((c) => c.branchId?._id)));
+                  const allAreaIds = Array.from(new Set(allowedBranches.map((c) => c.branchId?.id)));
                   setFormData((prev) => ({
                     ...prev,
                     branchIds: [...new Set([...prev.branchIds, ...allAreaIds])],
@@ -524,9 +582,9 @@ const LocationSelector = ({
             options={(() => {
               if (formData.branchIds.length === 0) return [];
               const userCentreIds = currentUser?.centreIds || [];
-              const accessibleCentres = filteredCentres.filter((centre) => userCentreIds.includes(centre._id));
+              const accessibleCentres = filteredCentres.filter((centre) => userCentreIds.includes(centre.id));
               const allCenters = accessibleCentres.map((centre) => ({
-                value: centre._id,
+                value: centre.id,
                 label: `${centre.name} (${centre.centreId})`,
                 sublabel: centre.regionId && centre.branchId
                   ? `Region: ${centre.regionId.name} | Area: ${centre.branchId.name}`
@@ -536,10 +594,10 @@ const LocationSelector = ({
 
               const selectedCenters = formData.centreIds
                 .map((centreId) => {
-                  const centre = accessibleCentres.find((c) => c._id === centreId);
+                  const centre = accessibleCentres.find((c) => c.id === centreId);
                   if (!centre) return null;
                   return {
-                    value: centre._id,
+                    value: centre.id,
                     label: `${centre.name} (${centre.centreId})`,
                     sublabel: centre.regionId && centre.branchId
                       ? `Region: ${centre.regionId.name} | Area: ${centre.branchId.name}`
@@ -562,13 +620,13 @@ const LocationSelector = ({
 
               return [...(selectAllOption ? [selectAllOption] : []), ...selectedCenters, ...availableCenters];
             })()}
-            value={null}
+            
             onChange={(selected) => {
               if (selected) {
                 if (selected.isSelectAll) {
                   const userCentreIds = currentUser?.centreIds || [];
-                  const accessibleCentres = filteredCentres.filter((centre) => userCentreIds.includes(centre._id));
-                  const allCentreIds = accessibleCentres.map((centre) => centre._id);
+                  const accessibleCentres = filteredCentres.filter((centre) => userCentreIds.includes(centre.id));
+                  const allCentreIds = accessibleCentres.map((centre) => centre.id);
                   setFormData((prev) => ({
                     ...prev,
                     centreIds: [...new Set([...prev.centreIds, ...allCentreIds])],

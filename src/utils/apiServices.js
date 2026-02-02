@@ -157,14 +157,14 @@ export const authAPI = {
       const tokenUser = getUserFromToken();
       
       // Try multiple possible ID field names
-      const userId = currentUser?._id || currentUser?.id || 
-                    tokenUser?._id || tokenUser?.userId || tokenUser?.id ||
+      const userId = currentUser?.id || currentUser?.id || 
+                    tokenUser?.id || tokenUser?.userId || tokenUser?.id ||
                     currentUser?.userId;
       
       if (!userId) throw new Error('No user ID found in any format');
       
       // Use the correct users endpoint
-      const url = `${API_URL}/api/users/${userId}`;
+      const url = `${API_URL}/api/auth/${userId}`;
       
       const data = await makeAuthenticatedRequest(url);
       
@@ -180,7 +180,7 @@ export const authAPI = {
       const token = getAuthToken();
       if (!token) throw new Error('No token found');
       
-      const url = `${API_URL}/api/users/${userId}`;
+      const url = `${API_URL}/api/auth/${userId}`;
       const data = await makeAuthenticatedRequest(url);
       return data;
     } catch (error) {
@@ -264,7 +264,7 @@ export const authAPI = {
 export const adExpenseAPI = {
   getAdExpenses: async () => {
     try {
-      const url = `${API_URL}/api/adExpense/`;
+      const url = `${API_URL}/api/adexpenses/`;
       const data = await makeAuthenticatedRequest(url);
       return data;
     } catch (error) {
@@ -272,9 +272,20 @@ export const adExpenseAPI = {
     }
   },
 
+  getAdExpenseById: async (id) => {
+  try {
+    const url = `${API_URL}/api/adexpenses/${id}`;
+    const data = await makeAuthenticatedRequest(url);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+},
+
+
   getAdExpensesByUserId: async (userId) => {
     try {
-      const url = `${API_URL}/api/adExpense/${userId}`;
+      const url = `${API_URL}/api/adexpenses/user/${userId}`;
       const data = await makeAuthenticatedRequest(url);
       return data;
     } catch (error) {
@@ -284,7 +295,7 @@ export const adExpenseAPI = {
 
   addAdExpense: async (expenseData) => {
     try {
-      const url = `${API_URL}/api/adExpense/`;
+      const url = `${API_URL}/api/adexpenses/`;
       const data = await makeAuthenticatedRequest(url, {
         method: 'POST',
         body: JSON.stringify(expenseData),
@@ -297,7 +308,7 @@ export const adExpenseAPI = {
 
   updateAdExpense: async (id, expenseData) => {
     try {
-      const url = `${API_URL}/api/adExpense/${id}`;
+      const url = `${API_URL}/api/adexpenses/${id}`;
       const data = await makeAuthenticatedRequest(url, {
         method: 'PUT',
         body: JSON.stringify(expenseData),
@@ -310,7 +321,7 @@ export const adExpenseAPI = {
 
   deleteAdExpense: async (id) => {
     try {
-      const url = `${API_URL}/api/adExpense/${id}`;
+      const url = `${API_URL}/api/adexpenses/${id}`;
       const data = await makeAuthenticatedRequest(url, {
         method: 'DELETE',
       });
@@ -329,7 +340,7 @@ export const adExpenseAPI = {
       const formData = new FormData();
       formData.append('file', file);
 
-      const url = `${API_URL}/api/adExpense/import/excel`;
+      const url = `${API_URL}/api/adexpenses/import/excel`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -353,7 +364,7 @@ export const adExpenseAPI = {
 
   getAnalysis: async (type) => {
     try {
-      const url = `${API_URL}/api/adExpense/analysis?type=${type}`;
+      const url = `${API_URL}/api/adexpenses/analysis?type=${type}`;
       const data = await makeAuthenticatedRequest(url);
       return data;
     } catch (error) {
@@ -363,7 +374,7 @@ export const adExpenseAPI = {
 
   getAllCentresAnalysis: async () => {
     try {
-      const url = `${API_URL}/api/adExpense/all-centres`;
+      const url = `${API_URL}/api/adexpenses/all-centres`;
       const data = await makeAuthenticatedRequest(url);
       return data;
     } catch (error) {
@@ -380,7 +391,7 @@ export const adExpenseAPI = {
       if (params.unit) queryParams.append('unit', params.unit); // 'month', 'week', 'quarter', 'year'
       
       const queryString = queryParams.toString();
-      const url = `${API_URL}/api/adExpense/analysis-user-time${queryString ? `?${queryString}` : ''}`;
+      const url = `${API_URL}/api/adexpenses/analysis-user-time${queryString ? `?${queryString}` : ''}`;
       const data = await makeAuthenticatedRequest(url);
       return data;
     } catch (error) {
@@ -421,7 +432,7 @@ export const adExpenseAPI = {
       }
       
       const queryString = queryParams.toString();
-      const url = `${API_URL}/api/adExpense/head-analysis${queryString ? `?${queryString}` : ''}`;
+      const url = `${API_URL}/api/adexpenses/head-analysis${queryString ? `?${queryString}` : ''}`;
       
       const data = await makeAuthenticatedRequest(url, {
         headers: {
@@ -485,7 +496,7 @@ export const adExpenseAPI = {
       if (params.page) queryParams.append('page', params.page);
       
       const queryString = queryParams.toString();
-      const url = `${API_URL}/api/adExpense/head-dashboard${queryString ? `?${queryString}` : ''}`;
+      const url = `${API_URL}/api/adexpenses/head-dashboard${queryString ? `?${queryString}` : ''}`;
       
       const data = await makeAuthenticatedRequest(url, {
         headers: {
@@ -662,7 +673,7 @@ export const userAPI = {
   },
 
   // Update user details
-  updateUserDetails: async (userData) => {
+  updateUserDeails: async (userData) => {
     try {
       const token = getAuthToken();
       if (!token) throw new Error('No token found');
@@ -674,7 +685,7 @@ export const userAPI = {
       const userId = currentUser?.id || tokenUser?.userId || tokenUser?.id;
       if (!userId) throw new Error('No user ID found');
       
-      const url = `${API_URL}/api/users/${userId}`;
+      const url = `${API_URL}/api/auth/${userId}`;
       const data = await makeAuthenticatedRequest(url, {
         method: 'PUT',
         body: JSON.stringify(userData),
@@ -698,7 +709,7 @@ export const userAPI = {
       const userId = currentUser?.id || tokenUser?.userId || tokenUser?.id;
       if (!userId) throw new Error('No user ID found');
       
-      const url = `${API_URL}/api/users/${userId}`;
+      const url = `${API_URL}/api/auth/${userId}`;
       const data = await makeAuthenticatedRequest(url);
       return data?.isPublic;
     } catch (error) {
@@ -726,7 +737,7 @@ export const userAPI = {
   // Get all users (admin only)
   getAllUsers: async () => {
     try {
-      const url = `${API_URL}/api/users`;
+      const url = `${API_URL}/api/auth`;
       const data = await makeAuthenticatedRequest(url);
       return data;
     } catch (error) {
@@ -740,9 +751,9 @@ export const bankAccountAPI = {
   // Get all bank accounts
   getAllBankAccounts: async () => {
     try {
-      const url = `${API_URL}/api/bankAccount/`;
-      const data = await makeAuthenticatedRequest(url);
-      return data;
+      const url = `${API_URL}/api/bank-accounts/`;
+      const result = await makeAuthenticatedRequest(url);
+      return result.data;
     } catch (error) {
       throw error;
     }
@@ -751,9 +762,9 @@ export const bankAccountAPI = {
   // Get a single bank account by ID
   getBankAccountById: async (id) => {
     try {
-      const url = `${API_URL}/api/bankAccount/${id}`;
-      const data = await makeAuthenticatedRequest(url);
-      return data;
+      const url = `${API_URL}/api/bank-accounts/${id}`;
+      const result = await makeAuthenticatedRequest(url);
+      return result.data;
     } catch (error) {
       throw error;
     }
@@ -762,12 +773,12 @@ export const bankAccountAPI = {
   // Add a new bank account
   addBankAccount: async (accountData) => {
     try {
-      const url = `${API_URL}/api/bankAccount/`;
-      const data = await makeAuthenticatedRequest(url, {
+      const url = `${API_URL}/api/bank-accounts/`;
+      const result = await makeAuthenticatedRequest(url, {
         method: 'POST',
         body: JSON.stringify(accountData),
       });
-      return data;
+      return result.data;
     } catch (error) {
       throw error;
     }
@@ -776,12 +787,12 @@ export const bankAccountAPI = {
   // Update a bank account
   updateBankAccount: async (id, accountData) => {
     try {
-      const url = `${API_URL}/api/bankAccount/${id}`;
-      const data = await makeAuthenticatedRequest(url, {
+      const url = `${API_URL}/api/bank-accounts/${id}`;
+      const result = await makeAuthenticatedRequest(url, {
         method: 'PUT',
         body: JSON.stringify(accountData),
       });
-      return data;
+      return result.data;
     } catch (error) {
       throw error;
     }
@@ -790,11 +801,11 @@ export const bankAccountAPI = {
   // Delete a bank account
   deleteBankAccount: async (id) => {
     try {
-      const url = `${API_URL}/api/bankAccount/${id}`;
-      const data = await makeAuthenticatedRequest(url, {
+      const url = `${API_URL}/api/bank-accounts/${id}`;
+      const result = await makeAuthenticatedRequest(url, {
         method: 'DELETE',
       });
-      return data;
+      return result.data;
     } catch (error) {
       throw error;
     }
@@ -803,9 +814,9 @@ export const bankAccountAPI = {
   // Get bank accounts by user ID
   getBankAccountsByUser: async (userId) => {
     try {
-      const url = `${API_URL}/api/bankAccount/user/${userId}`;
-      const data = await makeAuthenticatedRequest(url);
-      return data;
+      const url = `${API_URL}/api/bank-accounts/user/${userId}`;
+      const result = await makeAuthenticatedRequest(url);
+      return result.data;
     } catch (error) {
       throw error;
     }
@@ -826,9 +837,9 @@ export const bankAccountAPI = {
         queryParams.append('userId', filters.userId);
       }
 
-      const url = `${API_URL}/api/bankAccount/analysis${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      const data = await makeAuthenticatedRequest(url);
-      return data;
+      const url = `${API_URL}/api/bank-accounts/analysis${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const result = await makeAuthenticatedRequest(url);
+      return result.data;
     } catch (error) {
       throw error;
     }
@@ -846,9 +857,9 @@ export const bankAccountAPI = {
         queryParams.append('endDate', filters.endDate);
       }
 
-      const url = `${API_URL}/api/bankAccount/analysis/${id}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      const data = await makeAuthenticatedRequest(url);
-      return data;
+      const url = `${API_URL}/api/bank-accounts/analysis/${id}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const result = await makeAuthenticatedRequest(url);
+      return result.data;
     } catch (error) {
       throw error;
     }

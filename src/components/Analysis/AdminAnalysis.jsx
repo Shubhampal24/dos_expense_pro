@@ -299,7 +299,7 @@ const AdminAnalysis = () => {
           },
           bankAnalysis: (bankAnalysisResponse.bankAccounts || []).map(bank => ({
             account: {
-              _id: bank.accountId,
+              id: bank.accountId,
               bankName: bank.bankName,
               accountNumber: bank.accountNumber,
               accountHolder: bank.accountHolder,
@@ -451,7 +451,7 @@ const AdminAnalysis = () => {
   };
 
   const getUserName = (userId) => {
-    const user = users.find((u) => u._id === userId);
+    const user = users.find((u) => u.id === userId);
     return user ? user.name : "Unknown User";
   };
 
@@ -465,27 +465,27 @@ const AdminAnalysis = () => {
         let sortKey = "";
 
         if (timeUnit === "month") {
-          const date = new Date(period._id.year, period._id.month - 1);
+          const date = new Date(period.id.year, period.id.month - 1);
           periodLabel = date.toLocaleDateString("en-IN", {
             year: "numeric",
             month: "short",
           });
-          sortKey = `${period._id.year}-${String(period._id.month).padStart(
+          sortKey = `${period.id.year}-${String(period.id.month).padStart(
             2,
             "0"
           )}`;
         } else if (timeUnit === "week") {
-          periodLabel = `${period._id.year} W${period._id.week}`;
-          sortKey = `${period._id.year}-W${String(period._id.week).padStart(
+          periodLabel = `${period.id.year} W${period.id.week}`;
+          sortKey = `${period.id.year}-W${String(period.id.week).padStart(
             2,
             "0"
           )}`;
         } else if (timeUnit === "quarter") {
-          periodLabel = `${period._id.year} Q${period._id.quarter}`;
-          sortKey = `${period._id.year}-Q${period._id.quarter}`;
+          periodLabel = `${period.id.year} Q${period.id.quarter}`;
+          sortKey = `${period.id.year}-Q${period.id.quarter}`;
         } else if (timeUnit === "year") {
-          periodLabel = `${period._id.year}`;
-          sortKey = `${period._id.year}`;
+          periodLabel = `${period.id.year}`;
+          sortKey = `${period.id.year}`;
         }
 
         return {
@@ -1432,7 +1432,7 @@ const AdminAnalysis = () => {
                       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         {bankAnalysisData.bankAnalysis.map((bankData, index) => (
                           <div
-                            key={bankData.account._id || index}
+                            key={bankData.account.id || index}
                             className="bg-white rounded-lg border border-gray-200 p-6 hover: transition-all duration-200"
                           >
                             {/* Bank Account Header */}
@@ -1991,15 +1991,15 @@ const AdminAnalysis = () => {
                           {timeAnalysisData.analysis?.map((period, index) => {
                             let periodLabel = "";
                             if (timeUnit === "month") {
-                              periodLabel = `${period._id.year}-${String(
-                                period._id.month
+                              periodLabel = `${period.id.year}-${String(
+                                period.id.month
                               ).padStart(2, "0")}`;
                             } else if (timeUnit === "week") {
-                              periodLabel = `${period._id.year} W${period._id.week}`;
+                              periodLabel = `${period.id.year} W${period.id.week}`;
                             } else if (timeUnit === "quarter") {
-                              periodLabel = `${period._id.year} Q${period._id.quarter}`;
+                              periodLabel = `${period.id.year} Q${period.id.quarter}`;
                             } else if (timeUnit === "year") {
-                              periodLabel = `${period._id.year}`;
+                              periodLabel = `${period.id.year}`;
                             }
 
                             return (

@@ -35,7 +35,11 @@ const Login = () => {
             return;
         }
 
-        const loginData = { loginId: formData.loginId, pin: parseInt(formData.pin) };
+        const loginData = { 
+  loginId: formData.loginId.trim(),
+  pin: formData.pin.trim()
+};
+
         setIsLoading(true);
 
         try {
