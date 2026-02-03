@@ -223,7 +223,6 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       }
       // Call the new endpoint
       const response = await adExpenseAPI.getAdExpensesByUserId(userId);
-      console.log("🧾 RAW getAdExpensesByUserId RESPONSE:", response);
 
 // ✅ CORRECT: table only needs IDs
 setExpenses(response || []);
@@ -318,17 +317,17 @@ setExpenses(response || []);
             expense.bankAccount.ifscCode?.toLowerCase().includes(searchLower));
 
         // Search in locations
-        const matchesRegions = expense.regionIds?.some(
+        const matchesRegions = expense.region_ids?.some(
           (region) =>
             region.name?.toLowerCase().includes(searchLower)
         );
 
-        const matchesAreas = expense.branchIds?.some(
+        const matchesAreas = expense.branch_ids?.some(
           (branch) =>
             branch.name?.toLowerCase().includes(searchLower)
         );
 
-        const matchesCentres = expense.centreIds?.some(
+        const matchesCentres = expense.centre_ids?.some(
           (centre) =>
             centre.name?.toLowerCase().includes(searchLower) ||
             centre.centreId?.toLowerCase().includes(searchLower)
@@ -579,9 +578,9 @@ setExpenses(response || []);
       TdsAmount: expense.TdsAmount ? expense.TdsAmount.toString() : "",
       noOfDays: expense.noOfDays ? expense.noOfDays.toString() : "",
       verified: expense.verified,
-      regionIds: expense.regionIds?.map(r => r.id) || [],
-      branchIds: expense.branchIds?.map(b => b.id) || [],
-      centreIds: expense.centreIds?.map(c => c.id) || [],
+      regionIds: expense.region_ids?.map(r => r.id) || [],
+      branchIds: expense.branch_ids?.map(b => b.id) || [],
+      centreIds: expense.centre_ids?.map(c => c.id) || [],
       bankAccount: expense.bankAccount?.id || "",
     });
 

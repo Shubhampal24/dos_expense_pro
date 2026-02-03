@@ -44,6 +44,8 @@ const Login = () => {
 
         try {
             const response = await authAPI.login(loginData);
+            console.log("LOGIN RESPONSE USER:", response?.user);
+
             if (!APP_CONFIG.SUPPORTED_ROLES.includes(response.user?.role)) {
                 setError(`Access denied. Only ${APP_CONFIG.SUPPORTED_ROLES.join(', ')} users are allowed. Your role: ${response.user?.role || 'Unknown'}`);
                 authAPI.logout();

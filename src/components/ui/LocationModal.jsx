@@ -7,21 +7,18 @@ const highlightText = (text, searchTerm) => {
 
   const regex = new RegExp(
     `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-    "gi"
+    "gi",
   );
   const parts = text.toString().split(regex);
 
   return parts.map((part, index) =>
     regex.test(part) ? (
-      <mark
-        key={index}
-        className="bg-yellow-200 text-yellow-900 px-1 rounded"
-      >
+      <mark key={index} className="bg-yellow-200 text-yellow-900 px-1 rounded">
         {part}
       </mark>
     ) : (
       part
-    )
+    ),
   );
 };
 
@@ -63,7 +60,7 @@ const LocationModal = ({
               Location Details
             </h3>
             <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">
-              #{modalLocationData.expense._id?.slice(-6)}
+              #{modalLocationData.expense.id?.slice(-6)}
             </span>
           </div>
           <button
@@ -82,7 +79,7 @@ const LocationModal = ({
               <span className="text-gray-600 block">Date</span>
               <div className="font-medium">
                 {new Date(
-                  modalLocationData.expense.expenseDate
+                  modalLocationData.expense.expenseDate,
                 ).toLocaleDateString("en-IN")}
               </div>
             </div>
@@ -96,23 +93,21 @@ const LocationModal = ({
               <span className="text-gray-600 block">Amount</span>
               <div className="font-medium">
                 ₹
-                {modalLocationData.expense.amount.toLocaleString(
-                  "en-IN",
-                  { minimumFractionDigits: 2 }
-                )}
+                {modalLocationData.expense.amount.toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })}
               </div>
             </div>
             <div>
               <span className="text-gray-600 block">Status</span>
               <span
-                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${modalLocationData.expense.verified
-                  ? "bg-green-100 text-green-800"
-                  : "bg-yellow-100 text-yellow-800"
-                  }`}
+                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  modalLocationData.expense.verified
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}
               >
-                {modalLocationData.expense.verified
-                  ? "Verified"
-                  : "Pending"}
+                {modalLocationData.expense.verified ? "Verified" : "Pending"}
               </span>
             </div>
           </div>
@@ -154,14 +149,14 @@ const LocationModal = ({
                   Regions ({filteredModalLocations.regions.length}
                   {modalSearchTerm &&
                     modalLocationData.regions?.length !==
-                    filteredModalLocations.regions.length &&
+                      filteredModalLocations.regions.length &&
                     ` of ${modalLocationData.regions.length}`}
                   )
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-1">
                   {filteredModalLocations.regions.map((region) => (
                     <div
-                      key={region._id}
+                      key={region.id}
                       className="bg-amber-50 border border-amber-200 rounded p-2 text-xs"
                     >
                       <div
@@ -183,14 +178,14 @@ const LocationModal = ({
                   Areas ({filteredModalLocations.branches.length}
                   {modalSearchTerm &&
                     modalLocationData.branches?.length !==
-                    filteredModalLocations.branches.length &&
+                      filteredModalLocations.branches.length &&
                     ` of ${modalLocationData.branches.length}`}
                   )
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-1">
                   {filteredModalLocations.branches.map((branch) => (
                     <div
-                      key={branch._id}
+                      key={branch.id}
                       className="bg-blue-50 border border-blue-200 rounded p-2 text-xs"
                     >
                       <div
@@ -212,14 +207,14 @@ const LocationModal = ({
                   Centres ({filteredModalLocations.centres.length}
                   {modalSearchTerm &&
                     modalLocationData.centres?.length !==
-                    filteredModalLocations.centres.length &&
+                      filteredModalLocations.centres.length &&
                     ` of ${modalLocationData.centres.length}`}
                   )
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-1">
                   {filteredModalLocations.centres.map((centre) => (
                     <div
-                      key={centre._id}
+                      key={centre.id}
                       className="bg-green-50 border border-green-200 rounded p-2 text-xs"
                     >
                       <div
@@ -229,8 +224,7 @@ const LocationModal = ({
                         {highlightText(centre.name, modalSearchTerm)}
                       </div>
                       <div className="text-green-700 truncate">
-                        Code:{" "}
-                        {highlightText(centre.shortCode, modalSearchTerm)}
+                        Code: {highlightText(centre.shortCode, modalSearchTerm)}
                       </div>
                       <div className="text-green-600 truncate text-[10px]">
                         Centre ID:{" "}

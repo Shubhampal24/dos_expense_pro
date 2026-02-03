@@ -1,9 +1,9 @@
-import { API_ENDPOINTS, API_URL, DEFAULT_HEADERS } from './config';
-import { getUserFromToken } from './helpers';
+import { API_ENDPOINTS, API_URL, DEFAULT_HEADERS } from "./config";
+import { getUserFromToken } from "./helpers";
 
 // Helper function to get auth token
 const getAuthToken = () => {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem("authToken");
 };
 
 // Helper function to make authenticated requests
@@ -13,9 +13,9 @@ const makeAuthenticatedRequest = async (url, options = {}) => {
     ...DEFAULT_HEADERS,
     ...options.headers,
   };
-  
+
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const response = await fetch(url, {
@@ -24,23 +24,27 @@ const makeAuthenticatedRequest = async (url, options = {}) => {
   });
 
   // Check if response is JSON
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    throw new Error(`Server returned non-JSON response. Status: ${response.status}`);
+  const contentType = response.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    throw new Error(
+      `Server returned non-JSON response. Status: ${response.status}`,
+    );
   }
 
   const data = await response.json();
-  
+
   if (!response.ok) {
     // Handle 401 errors by redirecting to login
     if (response.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      window.location.href = "/";
     }
-    throw new Error(data.message || `Request failed with status ${response.status}`);
+    throw new Error(
+      data.message || `Request failed with status ${response.status}`,
+    );
   }
-  
+
   return data;
 };
 
@@ -51,28 +55,28 @@ export const authAPI = {
       const url = `${API_URL}${API_ENDPOINTS.AUTH.LOGIN}`;
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: DEFAULT_HEADERS,
         body: JSON.stringify({
           loginId: credentials.loginId,
-          pin: credentials.pin
+          pin: credentials.pin,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.message || "Login failed");
       }
 
       if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem("authToken", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       return {
         ...data,
-        user: data.user
+        user: data.user,
       };
     } catch (error) {
       throw error;
@@ -82,23 +86,28 @@ export const authAPI = {
   logout: () => {
     try {
       // Remove all auth-related items from localStorage
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('expenses');
-      
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("expenses");
+
       // Clear any other app-specific data if needed
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('auth') || key.startsWith('user') || key.startsWith('expense'))) {
+        if (
+          key &&
+          (key.startsWith("auth") ||
+            key.startsWith("user") ||
+            key.startsWith("expense"))
+        ) {
           keysToRemove.push(key);
         }
       }
-      
-      keysToRemove.forEach(key => {
+
+      keysToRemove.forEach((key) => {
         localStorage.removeItem(key);
       });
-      
+
       return true;
     } catch (error) {
       // Force clear localStorage as fallback
@@ -113,61 +122,65 @@ export const authAPI = {
 
   getCurrentUser: () => {
     // First try to get user from localStorage
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem("user");
     if (user) {
       return JSON.parse(user);
     }
-    
+
     // If no user in localStorage, try to get from token
     const tokenUser = getUserFromToken();
     if (tokenUser) {
       // Save to localStorage for future use
-      localStorage.setItem('user', JSON.stringify(tokenUser));
+      localStorage.setItem("user", JSON.stringify(tokenUser));
       return tokenUser;
     }
-    
+
     return null;
   },
 
   // Get enhanced user details including token information
   getEnhancedUserDetails: () => {
-    const localUser = localStorage.getItem('user');
+    const localUser = localStorage.getItem("user");
     const tokenUser = getUserFromToken();
-    
+
     return {
       localStorageUser: localUser ? JSON.parse(localUser) : null,
       tokenUser: tokenUser,
-      token: localStorage.getItem('authToken'),
-      isTokenValid: !!tokenUser
+      token: localStorage.getItem("authToken"),
+      isTokenValid: !!tokenUser,
     };
   },
 
   isAuthenticated: () => {
-    return !!localStorage.getItem('authToken');
+    return !!localStorage.getItem("authToken");
   },
 
   // Get user details from API (using the correct endpoint)
   fetchUserDetails: async () => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No token found');
-      
+      if (!token) throw new Error("No token found");
+
       // Get user ID from token or localStorage
       const currentUser = authAPI.getCurrentUser();
       const tokenUser = getUserFromToken();
-      
+
       // Try multiple possible ID field names
-      const userId = currentUser?.id || currentUser?.id || 
-                    tokenUser?.id || tokenUser?.userId || tokenUser?.id ||
-                    currentUser?.userId;
-      
-      if (!userId) throw new Error('No user ID found in any format');
-      
+      const userId =
+        currentUser?.id ||
+        currentUser?.id ||
+        tokenUser?.id ||
+        tokenUser?.userId ||
+        tokenUser?.id ||
+        currentUser?.userId;
+
+      if (!userId) throw new Error("No user ID found in any format");
+
       // Use the correct users endpoint
       const url = `${API_URL}/api/auth/${userId}`;
-      
+
       const data = await makeAuthenticatedRequest(url);
-      
+
       return data;
     } catch (error) {
       throw error;
@@ -178,8 +191,8 @@ export const authAPI = {
   fetchUserById: async (userId) => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No token found');
-      
+      if (!token) throw new Error("No token found");
+
       const url = `${API_URL}/api/auth/${userId}`;
       const data = await makeAuthenticatedRequest(url);
       return data;
@@ -192,15 +205,15 @@ export const authAPI = {
   fetchCurrentUserDetails: async () => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No token found');
-      
+      if (!token) throw new Error("No token found");
+
       // First get current user to get the ID
       const currentUser = authAPI.getCurrentUser();
       const tokenUser = getUserFromToken();
-      
+
       const userId = currentUser?.id || tokenUser?.userId || tokenUser?.id;
-      if (!userId) throw new Error('No user ID found');
-      
+      if (!userId) throw new Error("No user ID found");
+
       // Then fetch detailed user data
       return await authAPI.fetchUserById(userId);
     } catch (error) {
@@ -212,11 +225,11 @@ export const authAPI = {
   changePin: async (currentPin, newPin) => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No token found');
-      
+      if (!token) throw new Error("No token found");
+
       const url = `${API_URL}/api/auth/change-pin`;
       const data = await makeAuthenticatedRequest(url, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify({ currentPin, newPin }),
       });
       return data;
@@ -230,12 +243,12 @@ export const authAPI = {
     try {
       const url = `${API_URL}/api/auth/forget-pin`;
       const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to send OTP');
+      if (!response.ok) throw new Error(data.message || "Failed to send OTP");
       return data;
     } catch (error) {
       throw error;
@@ -247,17 +260,17 @@ export const authAPI = {
     try {
       const url = `${API_URL}/api/auth/reset-pin`;
       const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp, newPin }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to reset PIN');
+      if (!response.ok) throw new Error(data.message || "Failed to reset PIN");
       return data;
     } catch (error) {
       throw error;
     }
-  }
+  },
 };
 
 // Advertising Expense API calls
@@ -272,21 +285,30 @@ export const adExpenseAPI = {
     }
   },
 
-  getAdExpenseById: async (id) => {
-  try {
-    const url = `${API_URL}/api/adexpenses/${id}`;
-    const data = await makeAuthenticatedRequest(url);
-    return data;
-  } catch (error) {
-    throw error;
-  }
-},
-
-
   getAdExpensesByUserId: async (userId) => {
     try {
       const url = `${API_URL}/api/adexpenses/user/${userId}`;
       const data = await makeAuthenticatedRequest(url);
+      console.log(
+        "🟢 BY USERID API FULL RESPONSE:",
+        JSON.parse(JSON.stringify(data)),
+      );
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getAdExpenseById: async (id) => {
+    try {
+      const url = `${API_URL}/api/adexpenses/${id}`;
+      const data = await makeAuthenticatedRequest(url);
+
+      // Check for ID mismatch
+      if (data?.id !== id) {
+        console.warn(`⚠️ ID MISMATCH: Requested ${id}, got ${data?.id}`);
+      }
+
       return data;
     } catch (error) {
       throw error;
@@ -297,7 +319,7 @@ export const adExpenseAPI = {
     try {
       const url = `${API_URL}/api/adexpenses/`;
       const data = await makeAuthenticatedRequest(url, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(expenseData),
       });
       return data;
@@ -310,7 +332,7 @@ export const adExpenseAPI = {
     try {
       const url = `${API_URL}/api/adexpenses/${id}`;
       const data = await makeAuthenticatedRequest(url, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(expenseData),
       });
       return data;
@@ -323,7 +345,7 @@ export const adExpenseAPI = {
     try {
       const url = `${API_URL}/api/adexpenses/${id}`;
       const data = await makeAuthenticatedRequest(url, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       return data;
     } catch (error) {
@@ -335,16 +357,16 @@ export const adExpenseAPI = {
   importFromExcel: async (file) => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No authentication token found');
+      if (!token) throw new Error("No authentication token found");
 
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const url = `${API_URL}/api/adexpenses/import/excel`;
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           // Don't set Content-Type - let browser set it with boundary for FormData
         },
         body: formData,
@@ -353,7 +375,9 @@ export const adExpenseAPI = {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || `Import failed with status ${response.status}`);
+        throw new Error(
+          data.message || `Import failed with status ${response.status}`,
+        );
       }
 
       return data;
@@ -386,12 +410,12 @@ export const adExpenseAPI = {
   getUserAnalysisByTime: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
-      
-      if (params.userId) queryParams.append('userId', params.userId);
-      if (params.unit) queryParams.append('unit', params.unit); // 'month', 'week', 'quarter', 'year'
-      
+
+      if (params.userId) queryParams.append("userId", params.userId);
+      if (params.unit) queryParams.append("unit", params.unit); // 'month', 'week', 'quarter', 'year'
+
       const queryString = queryParams.toString();
-      const url = `${API_URL}/api/adexpenses/analysis-user-time${queryString ? `?${queryString}` : ''}`;
+      const url = `${API_URL}/api/adexpenses/analysis-user-time${queryString ? `?${queryString}` : ""}`;
       const data = await makeAuthenticatedRequest(url);
       return data;
     } catch (error) {
@@ -404,54 +428,73 @@ export const adExpenseAPI = {
     try {
       const token = getAuthToken();
       if (!token) {
-        throw new Error('No authentication token found. Please login again.');
+        throw new Error("No authentication token found. Please login again.");
       }
 
       const queryParams = new URLSearchParams();
-      
+
       // Time unit for grouping
-      if (params.unit) queryParams.append('unit', params.unit); // 'day', 'week', 'month', 'quarter', 'year'
-      
+      if (params.unit) queryParams.append("unit", params.unit); // 'day', 'week', 'month', 'quarter', 'year'
+
       // Date filtering parameters based on backend API structure
       if (params.selectedDate) {
-        queryParams.append('selectedDate', params.selectedDate); // YYYY-MM-DD format
+        queryParams.append("selectedDate", params.selectedDate); // YYYY-MM-DD format
       }
-      
-      if (params.selectedMonth !== undefined && params.selectedYear !== undefined) {
-        queryParams.append('selectedMonth', params.selectedMonth); // Number 1-12
-        queryParams.append('selectedYear', params.selectedYear); // Number YYYY
+
+      if (
+        params.selectedMonth !== undefined &&
+        params.selectedYear !== undefined
+      ) {
+        queryParams.append("selectedMonth", params.selectedMonth); // Number 1-12
+        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
       }
-      
-      if (params.selectedQuarter !== undefined && params.selectedYear !== undefined) {
-        queryParams.append('selectedQuarter', params.selectedQuarter); // Number 1-4
-        queryParams.append('selectedYear', params.selectedYear); // Number YYYY
+
+      if (
+        params.selectedQuarter !== undefined &&
+        params.selectedYear !== undefined
+      ) {
+        queryParams.append("selectedQuarter", params.selectedQuarter); // Number 1-4
+        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
       }
-      
-      if (params.selectedYear !== undefined && params.selectedMonth === undefined && params.selectedQuarter === undefined) {
-        queryParams.append('selectedYear', params.selectedYear); // Number YYYY
+
+      if (
+        params.selectedYear !== undefined &&
+        params.selectedMonth === undefined &&
+        params.selectedQuarter === undefined
+      ) {
+        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
       }
-      
+
       const queryString = queryParams.toString();
-      const url = `${API_URL}/api/adexpenses/head-analysis${queryString ? `?${queryString}` : ''}`;
-      
+      const url = `${API_URL}/api/adexpenses/head-analysis${queryString ? `?${queryString}` : ""}`;
+
       const data = await makeAuthenticatedRequest(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
-      
+
       return data;
     } catch (error) {
       // Provide more specific error messages
-      if (error.message.includes('Server error') || error.message.includes('500')) {
-        throw new Error('Backend server error: The HEAD time analysis endpoint may have missing dependencies. Please check server logs.');
-      } else if (error.message.includes('401')) {
-        throw new Error('Authentication failed. Please login again.');
-      } else if (error.message.includes('404')) {
-        throw new Error('HEAD time analysis endpoint not found. Please check the API route configuration.');
+      if (
+        error.message.includes("Server error") ||
+        error.message.includes("500")
+      ) {
+        throw new Error(
+          "Backend server error: The HEAD time analysis endpoint may have missing dependencies. Please check server logs.",
+        );
+      } else if (error.message.includes("401")) {
+        throw new Error("Authentication failed. Please login again.");
+      } else if (error.message.includes("404")) {
+        throw new Error(
+          "HEAD time analysis endpoint not found. Please check the API route configuration.",
+        );
       } else {
-        throw new Error(`Failed to fetch HEAD users time analysis: ${error.message}`);
+        throw new Error(
+          `Failed to fetch HEAD users time analysis: ${error.message}`,
+        );
       }
     }
   },
@@ -461,66 +504,85 @@ export const adExpenseAPI = {
     try {
       const token = getAuthToken();
       if (!token) {
-        throw new Error('No authentication token found. Please login again.');
+        throw new Error("No authentication token found. Please login again.");
       }
 
       const queryParams = new URLSearchParams();
-      
+
       // Date filtering parameters based on backend API structure
       if (params.selectedDate) {
-        queryParams.append('selectedDate', params.selectedDate); // YYYY-MM-DD format
+        queryParams.append("selectedDate", params.selectedDate); // YYYY-MM-DD format
       }
-      
-      if (params.selectedMonth !== undefined && params.selectedYear !== undefined) {
-        queryParams.append('selectedMonth', params.selectedMonth); // Number 1-12
-        queryParams.append('selectedYear', params.selectedYear); // Number YYYY
+
+      if (
+        params.selectedMonth !== undefined &&
+        params.selectedYear !== undefined
+      ) {
+        queryParams.append("selectedMonth", params.selectedMonth); // Number 1-12
+        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
       }
-      
-      if (params.selectedQuarter !== undefined && params.selectedYear !== undefined) {
-        queryParams.append('selectedQuarter', params.selectedQuarter); // Number 1-4
-        queryParams.append('selectedYear', params.selectedYear); // Number YYYY
+
+      if (
+        params.selectedQuarter !== undefined &&
+        params.selectedYear !== undefined
+      ) {
+        queryParams.append("selectedQuarter", params.selectedQuarter); // Number 1-4
+        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
       }
-      
-      if (params.selectedYear !== undefined && params.selectedMonth === undefined && params.selectedQuarter === undefined) {
-        queryParams.append('selectedYear', params.selectedYear); // Number YYYY
+
+      if (
+        params.selectedYear !== undefined &&
+        params.selectedMonth === undefined &&
+        params.selectedQuarter === undefined
+      ) {
+        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
       }
-      
+
       // Explicit date range (takes precedence when provided)
       if (params.startDate && params.endDate) {
-        queryParams.append('startDate', params.startDate); // YYYY-MM-DD
-        queryParams.append('endDate', params.endDate); // YYYY-MM-DD
+        queryParams.append("startDate", params.startDate); // YYYY-MM-DD
+        queryParams.append("endDate", params.endDate); // YYYY-MM-DD
       }
-      
+
       // Pagination parameters
-      if (params.limit) queryParams.append('limit', params.limit);
-      if (params.page) queryParams.append('page', params.page);
-      
+      if (params.limit) queryParams.append("limit", params.limit);
+      if (params.page) queryParams.append("page", params.page);
+
       const queryString = queryParams.toString();
-      const url = `${API_URL}/api/adexpenses/head-dashboard${queryString ? `?${queryString}` : ''}`;
-      
+      const url = `${API_URL}/api/adexpenses/head-dashboard${queryString ? `?${queryString}` : ""}`;
+
       const data = await makeAuthenticatedRequest(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
-      
+
       return data;
     } catch (error) {
       // Provide more specific error messages
-      if (error.message.includes('Server error') || error.message.includes('500')) {
-        throw new Error('Backend server error: The HEAD dashboard endpoint may have missing dependencies. Please check server logs.');
-      } else if (error.message.includes('401')) {
-        throw new Error('Authentication failed. Please login again.');
-      } else if (error.message.includes('404')) {
-        throw new Error('HEAD dashboard endpoint not found. Please check the API route configuration.');
-      } else if (error.message.includes('Invalid date filters')) {
-        throw new Error('Invalid date filter format. Please check your date selections.');
+      if (
+        error.message.includes("Server error") ||
+        error.message.includes("500")
+      ) {
+        throw new Error(
+          "Backend server error: The HEAD dashboard endpoint may have missing dependencies. Please check server logs.",
+        );
+      } else if (error.message.includes("401")) {
+        throw new Error("Authentication failed. Please login again.");
+      } else if (error.message.includes("404")) {
+        throw new Error(
+          "HEAD dashboard endpoint not found. Please check the API route configuration.",
+        );
+      } else if (error.message.includes("Invalid date filters")) {
+        throw new Error(
+          "Invalid date filter format. Please check your date selections.",
+        );
       } else {
         throw new Error(`Failed to fetch HEAD dashboard: ${error.message}`);
       }
     }
-  }
+  },
 };
 
 // Location/Geography API calls
@@ -589,7 +651,7 @@ export const locationAPI = {
     } catch (error) {
       throw error;
     }
-  }
+  },
 };
 
 // Categories API calls
@@ -608,14 +670,14 @@ export const categoryAPI = {
     try {
       const url = `${API_URL}/api/categories`;
       const data = await makeAuthenticatedRequest(url, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(categoryData),
       });
       return data;
     } catch (error) {
       throw error;
     }
-  }
+  },
 };
 
 export const userAPI = {
@@ -623,13 +685,13 @@ export const userAPI = {
     try {
       const url = `${API_URL}/api/auth/check-email`;
       const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mobile: identifier }),
       });
-      
+
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to send OTP');
+      if (!response.ok) throw new Error(data.message || "Failed to send OTP");
       return data;
     } catch (error) {
       throw error;
@@ -641,13 +703,14 @@ export const userAPI = {
     try {
       const url = `${API_URL}/api/auth/verify-otp`;
       const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, otp }),
       });
-      
+
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'OTP verification failed');
+      if (!response.ok)
+        throw new Error(data.message || "OTP verification failed");
       return data;
     } catch (error) {
       throw error;
@@ -659,13 +722,13 @@ export const userAPI = {
     try {
       const url = `${API_URL}/api/auth/register`;
       const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       });
-      
+
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Registration failed');
+      if (!response.ok) throw new Error(data.message || "Registration failed");
       return data;
     } catch (error) {
       throw error;
@@ -676,18 +739,18 @@ export const userAPI = {
   updateUserDeails: async (userData) => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No token found');
-      
+      if (!token) throw new Error("No token found");
+
       // Get user ID from token or localStorage
       const currentUser = authAPI.getCurrentUser();
       const tokenUser = getUserFromToken();
-      
+
       const userId = currentUser?.id || tokenUser?.userId || tokenUser?.id;
-      if (!userId) throw new Error('No user ID found');
-      
+      if (!userId) throw new Error("No user ID found");
+
       const url = `${API_URL}/api/auth/${userId}`;
       const data = await makeAuthenticatedRequest(url, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(userData),
       });
       return data;
@@ -700,15 +763,15 @@ export const userAPI = {
   getIsPublic: async () => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No token found');
-      
+      if (!token) throw new Error("No token found");
+
       // Get user ID from token or localStorage
       const currentUser = authAPI.getCurrentUser();
       const tokenUser = getUserFromToken();
-      
+
       const userId = currentUser?.id || tokenUser?.userId || tokenUser?.id;
-      if (!userId) throw new Error('No user ID found');
-      
+      if (!userId) throw new Error("No user ID found");
+
       const url = `${API_URL}/api/auth/${userId}`;
       const data = await makeAuthenticatedRequest(url);
       return data?.isPublic;
@@ -721,11 +784,11 @@ export const userAPI = {
   updateIsPublic: async (isPublic) => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No token found');
-      
+      if (!token) throw new Error("No token found");
+
       const url = `${API_URL}/api/auth/is-public`;
       const data = await makeAuthenticatedRequest(url, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify({ isPublic }),
       });
       return data;
@@ -743,7 +806,7 @@ export const userAPI = {
     } catch (error) {
       throw error;
     }
-  }
+  },
 };
 
 // Bank Account API calls
@@ -775,7 +838,7 @@ export const bankAccountAPI = {
     try {
       const url = `${API_URL}/api/bank-accounts/`;
       const result = await makeAuthenticatedRequest(url, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(accountData),
       });
       return result.data;
@@ -789,7 +852,7 @@ export const bankAccountAPI = {
     try {
       const url = `${API_URL}/api/bank-accounts/${id}`;
       const result = await makeAuthenticatedRequest(url, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(accountData),
       });
       return result.data;
@@ -803,7 +866,7 @@ export const bankAccountAPI = {
     try {
       const url = `${API_URL}/api/bank-accounts/${id}`;
       const result = await makeAuthenticatedRequest(url, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       return result.data;
     } catch (error) {
@@ -826,18 +889,18 @@ export const bankAccountAPI = {
   getAllBankAccountsAnalysis: async (filters = {}) => {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (filters.startDate) {
-        queryParams.append('startDate', filters.startDate);
+        queryParams.append("startDate", filters.startDate);
       }
       if (filters.endDate) {
-        queryParams.append('endDate', filters.endDate);
+        queryParams.append("endDate", filters.endDate);
       }
       if (filters.userId) {
-        queryParams.append('userId', filters.userId);
+        queryParams.append("userId", filters.userId);
       }
 
-      const url = `${API_URL}/api/bank-accounts/analysis${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const url = `${API_URL}/api/bank-accounts/analysis${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
       const result = await makeAuthenticatedRequest(url);
       return result.data;
     } catch (error) {
@@ -849,19 +912,19 @@ export const bankAccountAPI = {
   getBankAccountAnalysisById: async (id, filters = {}) => {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (filters.startDate) {
-        queryParams.append('startDate', filters.startDate);
+        queryParams.append("startDate", filters.startDate);
       }
       if (filters.endDate) {
-        queryParams.append('endDate', filters.endDate);
+        queryParams.append("endDate", filters.endDate);
       }
 
-      const url = `${API_URL}/api/bank-accounts/analysis/${id}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const url = `${API_URL}/api/bank-accounts/analysis/${id}${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
       const result = await makeAuthenticatedRequest(url);
       return result.data;
     } catch (error) {
       throw error;
     }
-  }
+  },
 };

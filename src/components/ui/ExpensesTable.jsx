@@ -10,6 +10,8 @@ import {
 } from "@heroicons/react/24/outline";
 import DateRangePicker from "../DateRangePicker";
 import LocationModal from "./LocationModal";
+import { adExpenseAPI } from "../../utils/apiServices";
+
 
 // Helper function to highlight search terms
 const highlightText = (text, searchTerm) => {
@@ -60,18 +62,83 @@ const ExpensesTable = ({
   setModalSearchTerm,
   filteredModalLocations,
 }) => {
+
+  // console.log("📦 Expenses from backend:", expenses);
+
+  // 🔒 Show only non-deleted expenses
+const activeExpenses = expenses.filter(
+  (expense) => expense.isDeleted === false
+);
+
+const activeFilteredExpenses = filteredExpenses.filter(
+  (expense) => expense.isDeleted === false
+);
+
   // Helper function to open location modal
-  const openLocationModal = (expense) => {
+  const openLocationModal = async (expense) => {
+  try {
+    const response = await adExpenseAPI.getAdExpenseById(expense.id);
+
+    // ✅ VALIDATION: Ensure response matches requested ID
+    if (response?.id && response.id !== expense.id) {
+      console.error(`❌ CRITICAL: Backend returned wrong expense. Expected: ${expense.id}, Got: ${response.id}`);
+      // Still use the original expense data, ignore API response with wrong ID
+    }
+
+    // ✅ ALWAYS use the clicked expense data, never use API response data for main fields
+    const expenseToSet = {
+      id: expense.id,                    // 👈 ALWAYS use clicked expense ID
+      expenseDate: expense.expenseDate,
+      paidTo: expense.paidTo,
+      amount: expense.amount,
+      reason: expense.reason,
+      verified: expense.verified,
+      bankAccount: expense.bankAccount,
+      GST: expense.GST,
+      TdsAmount: expense.TdsAmount,
+      region_ids: expense.region_ids,
+      branch_ids: expense.branch_ids,
+      centre_ids: expense.centre_ids,
+      createdBy: expense.createdBy,
+      createdAt: expense.createdAt,
+      updatedAt: expense.updatedAt,
+      // Only use locations array from API response
+      locations: response?.locations || [],
+    };
+
     setModalLocationData({
-      type: "Complete Location Details",
-      expense: expense,
-      regions: expense.regionIds || [],
-      branches: expense.branchIds || [],
-      centres: expense.centreIds || [],
+      expense: expenseToSet,
+
+      regions: (response?.locations || [])
+        .filter(l => l.regionId)
+        .map(l => ({
+          id: l.regionId,
+          name: l.regionName,
+        })),
+
+      branches: (response?.locations || [])
+        .filter(l => l.branchId)
+        .map(l => ({
+          id: l.branchId,
+          name: l.branchName,
+        })),
+
+      centres: (response?.locations || [])
+        .filter(l => l.centreId)
+        .map(l => ({
+          id: l.centreId,
+          name: l.centreName,
+          centreId: l.centreId,
+        })),
     });
-    setModalSearchTerm(""); // Reset search when opening modal
+
+    setModalSearchTerm("");
     setShowLocationModal(true);
-  };
+  } catch (err) {
+    console.error("❌ Failed to load location details:", err);
+  }
+};
+
 
   // Clear all filters
   const handleClearFilters = () => {
@@ -100,7 +167,9 @@ const ExpensesTable = ({
                 <div className="text-sm">
                   <span className="text-green-600 text-sm font-medium">Total: </span>
                   <span className="text-green-800 text-sm font-bold">
-                    ₹{filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{activeFilteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
+  .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+
                   </span>
                 </div>
               </div>
@@ -222,7 +291,8 @@ const ExpensesTable = ({
                     Clear All
                   </button>
                   <div className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
-                    {filteredExpenses.length} of {expenses.length} expenses
+                    {activeFilteredExpenses.length} of {activeExpenses.length} expenses
+
                   </div>
                 </div>
               </div>
@@ -234,11 +304,13 @@ const ExpensesTable = ({
               <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-gray-500">Loading expenses...</p>
             </div>
-          ) : expenses.length === 0 ? (
+          ) : activeExpenses.length === 0 ? (
+
             <div className="bg-gray-50 rounded-lg border p-8 text-center">
               <p className="text-gray-500">No expenses found</p>
             </div>
-          ) : filteredExpenses.length === 0 ? (
+          ) : activeFilteredExpenses.length === 0 ? (
+
             <div className="bg-gray-50 rounded-lg border p-8 text-center">
               <p className="text-gray-500">
                 No expenses match your filters
@@ -289,9 +361,11 @@ const ExpensesTable = ({
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredExpenses.map((expense, index) => (
+                    {activeFilteredExpenses.map((expense, index) => (
+
+                      
                       <tr
-                        key={expense._id}
+                        key={expense.id}
                         className={
                           index % 2 === 0 ? "bg-white" : "bg-gray-50"
                         }
@@ -399,147 +473,92 @@ const ExpensesTable = ({
                         <td className="px-4 py-3 text-sm text-gray-900">
                           <div className="max-h-24 overflow-y-auto space-y-1">
                             {/* Regions */}
-                            {expense.regionIds?.length > 0 && (
-                              <div>
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="text-xs font-medium text-gray-600">
-                                    Regions ({expense.regionIds.length}):
-                                  </div>
-                                  <button
-                                    onClick={() =>
-                                      openLocationModal(expense)
-                                    }
-                                    className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200 cursor-pointer transition-colors"
-                                    title="View all location details"
-                                  >
-                                    <MapPinIcon className="w-3 h-3" />
-                                    <span>View All</span>
-                                  </button>
-                                </div>
-                                <div className="flex flex-wrap gap-1 mb-2">
-                                  {expense.regionIds
-                                    .slice(0, 3)
-                                    .map((region) => (
-                                      <span
-                                        key={region._id}
-                                        className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
-                                        title={`RegionId: ${region._id}`}
-                                      >
-                                        {highlightText(
-                                          region.name,
-                                          searchTerm
-                                        )}
-                                      </span>
-                                    ))}
-                                  {expense.regionIds.length > 3 && (
-                                    <button
-                                      onClick={() =>
-                                        openLocationModal(expense)
-                                      }
-                                      className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded hover:bg-gray-200 cursor-pointer transition-colors"
-                                      title="Click to see all locations"
-                                    >
-                                      +{expense.regionIds.length - 3} more
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                            {expense.region_ids?.length > 0 && (
+  <div>
+    <div className="flex items-center justify-between mb-1">
+      <div className="text-xs font-medium text-gray-600">
+        Regions ({expense.region_ids.length}):
+      </div>
+      <button
+        onClick={() => openLocationModal(expense)}
+        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+      >
+        <MapPinIcon className="w-3 h-3" />
+        <span>View All</span>
+      </button>
+    </div>
+
+    <div className="flex flex-wrap gap-1 mb-2">
+      {expense.region_ids.slice(0, 3).map((id) => (
+        <span
+          key={id}
+          className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
+        >
+          {id.slice(0, 6)}…
+        </span>
+      ))}
+    </div>
+  </div>
+)}
+
                             {/* Branches */}
-                            {expense.branchIds?.length > 0 && (
-                              <div>
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="text-xs font-medium text-gray-600">
-                                    Areas ({expense.branchIds.length}):
-                                  </div>
-                                  <button
-                                    onClick={() =>
-                                      openLocationModal(expense)
-                                    }
-                                    className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200 cursor-pointer transition-colors"
-                                    title="View all location details"
-                                  >
-                                    <MapPinIcon className="w-3 h-3" />
-                                    <span>View All</span>
-                                  </button>
-                                </div>
-                                <div className="flex flex-wrap gap-1 mb-2">
-                                  {expense.branchIds
-                                    .slice(0, 3)
-                                    .map((branch) => (
-                                      <span
-                                        key={branch._id}
-                                        className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded"
-                                        title={`AreaId: ${branch._id}`}
-                                      >
-                                        {branch.name}
-                                      </span>
-                                    ))}
-                                  {expense.branchIds.length > 3 && (
-                                    <button
-                                      onClick={() => {
-                                        setModalLocationData({
-                                          type: "Complete Location Details",
-                                          expense: expense,
-                                          regions: expense.regionIds || [],
-                                          branches: expense.branchIds,
-                                          centres: expense.centreIds || [],
-                                        });
-                                        setShowLocationModal(true);
-                                      }}
-                                      className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded hover:bg-gray-200 cursor-pointer transition-colors"
-                                      title="Click to see all locations"
-                                    >
-                                      +{expense.branchIds.length - 3} more
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                            {expense.branch_ids?.length > 0 && (
+  <div>
+    <div className="flex items-center justify-between mb-1">
+      <div className="text-xs font-medium text-gray-600">
+        Areas ({expense.branch_ids.length}):
+      </div>
+      <button
+        onClick={() => openLocationModal(expense)}
+        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+      >
+        <MapPinIcon className="w-3 h-3" />
+        <span>View All</span>
+      </button>
+    </div>
+
+    <div className="flex flex-wrap gap-1 mb-2">
+      {expense.branch_ids.slice(0, 3).map((id) => (
+        <span
+          key={id}
+          className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded"
+        >
+          {id.slice(0, 6)}…
+        </span>
+      ))}
+    </div>
+  </div>
+)}
+
                             {/* Centres */}
-                            {expense.centreIds?.length > 0 && (
-                              <div>
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="text-xs font-medium text-gray-600">
-                                    Centres ({expense.centreIds.length}):
-                                  </div>
-                                  <button
-                                    onClick={() =>
-                                      openLocationModal(expense)
-                                    }
-                                    className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200 cursor-pointer transition-colors"
-                                    title="View all location details"
-                                  >
-                                    <MapPinIcon className="w-3 h-3" />
-                                    <span>View All</span>
-                                  </button>
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                  {expense.centreIds
-                                    .slice(0, 3)
-                                    .map((centre) => (
-                                      <span
-                                        key={centre._id}
-                                        className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded"
-                                        title={`${centre.name} | ${centre.centreId} | CentreId: ${centre._id}`}
-                                      >
-                                        {centre.name}
-                                      </span>
-                                    ))}
-                                  {expense.centreIds.length > 3 && (
-                                    <button
-                                      onClick={() =>
-                                        openLocationModal(expense)
-                                      }
-                                      className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded hover:bg-gray-200 cursor-pointer transition-colors"
-                                      title="Click to see all locations"
-                                    >
-                                      +{expense.centreIds.length - 3} more
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                            {expense.centre_ids?.length > 0 && (
+  <div>
+    <div className="flex items-center justify-between mb-1">
+      <div className="text-xs font-medium text-gray-600">
+        Centres ({expense.centre_ids.length}):
+      </div>
+      <button
+        onClick={() => openLocationModal(expense)}
+        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+      >
+        <MapPinIcon className="w-3 h-3" />
+        <span>View All</span>
+      </button>
+    </div>
+
+    <div className="flex flex-wrap gap-1">
+      {expense.centre_ids.slice(0, 3).map((id) => (
+        <span
+          key={id}
+          className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded"
+        >
+          {id.slice(0, 6)}…
+        </span>
+      ))}
+    </div>
+  </div>
+)}
+
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 max-w-xs">
@@ -559,7 +578,8 @@ const ExpensesTable = ({
                               : "bg-yellow-100 text-yellow-800"
                               }`}
                           >
-                            {expense.createdBy.name}
+                            {expense.createdByName || "—"}
+
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
