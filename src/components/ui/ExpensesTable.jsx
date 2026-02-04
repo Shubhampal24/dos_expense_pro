@@ -473,11 +473,11 @@ const activeFilteredExpenses = filteredExpenses.filter(
                         <td className="px-4 py-3 text-sm text-gray-900">
                           <div className="max-h-24 overflow-y-auto space-y-1">
                             {/* Regions */}
-                            {expense.region_ids?.length > 0 && (
+                            {expense.region_names?.length > 0 && (
   <div>
     <div className="flex items-center justify-between mb-1">
       <div className="text-xs font-medium text-gray-600">
-        Regions ({expense.region_ids.length}):
+        Regions ({expense.region_names.length}):
       </div>
       <button
         onClick={() => openLocationModal(expense)}
@@ -489,7 +489,7 @@ const activeFilteredExpenses = filteredExpenses.filter(
     </div>
 
     <div className="flex flex-wrap gap-1 mb-2">
-      {expense.region_ids.slice(0, 3).map((id) => (
+      {expense.region_names.slice(0, 3).map((id) => (
         <span
           key={id}
           className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
@@ -502,11 +502,11 @@ const activeFilteredExpenses = filteredExpenses.filter(
 )}
 
                             {/* Branches */}
-                            {expense.branch_ids?.length > 0 && (
+                            {expense.branch_names?.length > 0 && (
   <div>
     <div className="flex items-center justify-between mb-1">
       <div className="text-xs font-medium text-gray-600">
-        Areas ({expense.branch_ids.length}):
+        Areas ({expense.branch_names.length}):
       </div>
       <button
         onClick={() => openLocationModal(expense)}
@@ -518,7 +518,7 @@ const activeFilteredExpenses = filteredExpenses.filter(
     </div>
 
     <div className="flex flex-wrap gap-1 mb-2">
-      {expense.branch_ids.slice(0, 3).map((id) => (
+      {expense.branch_names.slice(0, 3).map((id) => (
         <span
           key={id}
           className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded"
