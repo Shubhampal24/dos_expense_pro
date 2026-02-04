@@ -32,6 +32,94 @@ const LocationModal = ({
 }) => {
   if (!showLocationModal || !modalLocationData) return null;
 
+  const dedupeLocations = (items, getKey) => {
+    const unique = new Map();
+    items.forEach((item) => {
+      const key = getKey(item);
+      if (!key) return;
+      if (!unique.has(key)) {
+        unique.set(key, item);
+      }
+    });
+    return Array.from(unique.values());
+  };
+
+  const baseRegions =
+    modalLocationData.expense?.region_names?.length > 0
+      ? modalLocationData.expense.region_names.map((name) => ({
+          id: name,
+          name,
+        }))
+      : filteredModalLocations.regions || [];
+
+  const baseBranches =
+    modalLocationData.expense?.branch_names?.length > 0
+      ? modalLocationData.expense.branch_names.map((name) => ({
+          id: name,
+          name,
+        }))
+      : filteredModalLocations.branches || [];
+
+  const baseCentres =
+    modalLocationData.expense?.centre_names?.length > 0
+      ? modalLocationData.expense.centre_names.map((name, index) => ({
+          id: modalLocationData.expense.centre_ids?.[index] || name,
+          name,
+          centreId: modalLocationData.expense.centre_ids?.[index] || "",
+        }))
+      : filteredModalLocations.centres || [];
+
+  const searchLower = modalSearchTerm.toLowerCase().trim();
+
+  const filteredRegionsLocal = searchLower
+    ? baseRegions.filter(
+        (region) =>
+          region.name?.toLowerCase().includes(searchLower) ||
+          region.id?.toLowerCase().includes(searchLower)
+      )
+    : baseRegions;
+
+  const filteredBranchesLocal = searchLower
+    ? baseBranches.filter(
+        (branch) =>
+          branch.name?.toLowerCase().includes(searchLower) ||
+          branch.id?.toLowerCase().includes(searchLower)
+      )
+    : baseBranches;
+
+  const filteredCentresLocal = searchLower
+    ? baseCentres.filter(
+        (centre) =>
+          centre.name?.toLowerCase().includes(searchLower) ||
+          centre.centreId?.toLowerCase().includes(searchLower) ||
+          centre.id?.toLowerCase().includes(searchLower)
+      )
+    : baseCentres;
+
+  const uniqueRegions = dedupeLocations(
+    filteredRegionsLocal,
+    (region) => (region.id || region.name || "").toString().toLowerCase()
+  );
+
+  const uniqueBranches = dedupeLocations(
+    filteredBranchesLocal,
+    (branch) => (branch.id || branch.name || "").toString().toLowerCase()
+  );
+
+  const uniqueCentres = dedupeLocations(
+    filteredCentresLocal,
+    (centre) =>
+      (
+        centre.centreId ||
+        centre.id ||
+        centre.name ||
+        ""
+      ).toString().toLowerCase()
+  );
+
+  const totalLocations =
+    uniqueRegions.length + uniqueBranches.length + uniqueCentres.length;
+
   const handleClose = () => {
     setShowLocationModal(false);
     setModalSearchTerm("");
@@ -133,31 +221,28 @@ const LocationModal = ({
               )}
             </div>
             <div className="px-2 py-1 bg-white border rounded text-xs font-medium">
-              {(filteredModalLocations.regions?.length || 0) +
-                (filteredModalLocations.branches?.length || 0) +
-                (filteredModalLocations.centres?.length || 0)}{" "}
-              locations
+              {totalLocations} locations
             </div>
           </div>
 
           {/* Compact Location Lists */}
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* Regions */}
-            {filteredModalLocations.regions?.length > 0 && (
+            {uniqueRegions.length > 0 && (
               <div>
                 <div className="font-medium text-amber-900 mb-1 text-xs">
-                  Regions ({filteredModalLocations.regions.length}
+                  Regions ({uniqueRegions.length}
                   {modalSearchTerm &&
                     modalLocationData.regions?.length !==
-                      filteredModalLocations.regions.length &&
+                      uniqueRegions.length &&
                     ` of ${modalLocationData.regions.length}`}
                   )
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-1">
-                  {filteredModalLocations.regions.map((region) => (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-2">
+                  {uniqueRegions.map((region) => (
                     <div
                       key={region.id}
-                      className="bg-amber-50 border border-amber-200 rounded p-2 text-xs"
+                      className="bg-amber-50 border border-amber-200 rounded p-2 text-xs min-w-[96px]"
                     >
                       <div
                         className="font-semibold truncate"
@@ -172,21 +257,21 @@ const LocationModal = ({
             )}
 
             {/* Areas */}
-            {filteredModalLocations.branches?.length > 0 && (
+            {uniqueBranches.length > 0 && (
               <div>
                 <div className="font-medium text-blue-900 mb-1 text-xs">
-                  Areas ({filteredModalLocations.branches.length}
+                  Areas ({uniqueBranches.length}
                   {modalSearchTerm &&
                     modalLocationData.branches?.length !==
-                      filteredModalLocations.branches.length &&
+                      uniqueBranches.length &&
                     ` of ${modalLocationData.branches.length}`}
                   )
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-1">
-                  {filteredModalLocations.branches.map((branch) => (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-2">
+                  {uniqueBranches.map((branch) => (
                     <div
                       key={branch.id}
-                      className="bg-blue-50 border border-blue-200 rounded p-2 text-xs"
+                      className="bg-blue-50 border border-blue-200 rounded p-2 text-xs min-w-[96px]"
                     >
                       <div
                         className="font-semibold truncate"
@@ -201,21 +286,21 @@ const LocationModal = ({
             )}
 
             {/* Centres */}
-            {filteredModalLocations.centres?.length > 0 && (
+            {uniqueCentres.length > 0 && (
               <div>
                 <div className="font-medium text-green-900 mb-1 text-xs">
-                  Centres ({filteredModalLocations.centres.length}
+                  Centres ({uniqueCentres.length}
                   {modalSearchTerm &&
                     modalLocationData.centres?.length !==
-                      filteredModalLocations.centres.length &&
+                      uniqueCentres.length &&
                     ` of ${modalLocationData.centres.length}`}
                   )
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-1">
-                  {filteredModalLocations.centres.map((centre) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {uniqueCentres.map((centre) => (
                     <div
                       key={centre.id}
-                      className="bg-green-50 border border-green-200 rounded p-2 text-xs"
+                      className="bg-green-50 border border-green-200 rounded p-1.5 text-xs min-w-0"
                     >
                       <div
                         className="font-semibold truncate"
@@ -223,10 +308,29 @@ const LocationModal = ({
                       >
                         {highlightText(centre.name, modalSearchTerm)}
                       </div>
-                      <div className="text-green-700 truncate">
-                        Code: {highlightText(centre.shortCode, modalSearchTerm)}
-                      </div>
-                      <div className="text-green-600 truncate text-[10px]">
+                      {centre.shortCode && (
+                        <div className="text-green-700 truncate">
+                          Code: {highlightText(centre.shortCode, modalSearchTerm)}
+                        </div>
+                      )}
+                      {(centre.regionName || centre.branchName) && (
+                        <div className="text-green-700 truncate text-[10px]">
+                          {centre.regionName && (
+                            <span>
+                              Region:{" "}
+                              {highlightText(centre.regionName, modalSearchTerm)}
+                            </span>
+                          )}
+                          {centre.regionName && centre.branchName && " | "}
+                          {centre.branchName && (
+                            <span>
+                              Area:{" "}
+                              {highlightText(centre.branchName, modalSearchTerm)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="text-green-600 break-words text-[10px]">
                         Centre ID:{" "}
                         {highlightText(centre.centreId, modalSearchTerm)}
                       </div>
@@ -239,9 +343,9 @@ const LocationModal = ({
 
           {/* No Results */}
           {modalSearchTerm &&
-            filteredModalLocations.regions?.length === 0 &&
-            filteredModalLocations.branches?.length === 0 &&
-            filteredModalLocations.centres?.length === 0 && (
+            uniqueRegions.length === 0 &&
+            uniqueBranches.length === 0 &&
+            uniqueCentres.length === 0 && (
               <div className="text-center py-8 bg-gray-50 rounded">
                 <div className="text-gray-400 text-2xl mb-2">🔍</div>
                 <div className="text-xs text-gray-800 mb-1">
