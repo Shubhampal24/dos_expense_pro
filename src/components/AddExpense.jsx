@@ -224,8 +224,32 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       // Call the new endpoint
       const response = await adExpenseAPI.getAdExpensesByUserId(userId);
 
-// ✅ CORRECT: table only needs IDs
-setExpenses(response || []);
+// ✅ NORMALIZE BACKEND DATA → FRONTEND SHAPE
+const normalizedExpenses = (response || []).map(exp => ({
+  ...exp,
+
+  // 🔹 match frontend naming
+  GST: exp.GST ?? exp.gst,
+  TdsAmount: exp.TdsAmount ?? exp.tdsAmount,
+
+  // 🔹 normalize bank account (table expects object)
+  bankAccount: exp.bankAccount ?? (
+    exp.bankAccountId || exp.bankName
+      ? {
+          id: exp.bankAccountId,
+          bankName: exp.bankName,
+        }
+      : null
+  ),
+
+  // 🔹 safety default (CRITICAL for table rendering)
+  isDeleted: exp.isDeleted ?? false,
+}));
+
+// ✅ IMPORTANT: set BOTH states
+setExpenses(normalizedExpenses);
+setFilteredExpenses(normalizedExpenses);
+
 
 
 

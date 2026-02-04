@@ -67,11 +67,11 @@ const ExpensesTable = ({
 
   // 🔒 Show only non-deleted expenses
 const activeExpenses = expenses.filter(
-  (expense) => expense.isDeleted === false
+  (expense) => expense.isDeleted !== true
 );
 
 const activeFilteredExpenses = filteredExpenses.filter(
-  (expense) => expense.isDeleted === false
+  (expense) => expense.isDeleted !== true
 );
 
   // Helper function to open location modal
@@ -324,7 +324,7 @@ const activeFilteredExpenses = filteredExpenses.filter(
             </div>
           ) : (
             <div className="bg-white rounded-lg border overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="max-h-[480px] overflow-y-auto overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
