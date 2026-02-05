@@ -303,7 +303,7 @@ export const adExpenseAPI = {
     try {
       const url = `${API_URL}/api/adexpenses/${id}`;
       const data = await makeAuthenticatedRequest(url);
-
+console.log("🟢 BY ID API FULL RESPONSE:", JSON.parse(JSON.stringify(data)));
       // Check for ID mismatch
       if (data?.id !== id) {
         console.warn(`⚠️ ID MISMATCH: Requested ${id}, got ${data?.id}`);
@@ -335,6 +335,7 @@ export const adExpenseAPI = {
         method: "PUT",
         body: JSON.stringify(expenseData),
       });
+      console.log("BY ID API FULL RESPONSE:", data);
       return data;
     } catch (error) {
       throw error;

@@ -434,6 +434,7 @@ const ExpenseForm = ({
           currentUser={currentUser}
           accessDeniedEntries={accessDeniedEntries}
           setShowAccessDeniedModal={setShowAccessDeniedModal}
+          disableLocalStorage={isEditMode}
         />
       )}
 

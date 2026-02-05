@@ -8,6 +8,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import ExpenseForm from "./ui/ExpenseForm";
 import ExpensesTable from "./ui/ExpensesTable";
+import EditExpenseModal from "./ui/EditExpenseModal";
 import ReviewModal from "./ui/ReviewModal";
 import ExcelImportModal from "./ui/ExcelImportModal";
 import DeleteConfirmModal from "./ui/DeleteConfirmModal";
@@ -78,6 +79,10 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
   const [editingExpense, setEditingExpense] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
+
+  // Modal Edit State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editExpenseId, setEditExpenseId] = useState(null);
 
   useEffect(() => {
     // Get current user data from props first, then fallback to API
@@ -587,30 +592,24 @@ setFilteredExpenses(normalizedExpenses);
 
   // Edit Expense Functions
   const handleEditExpense = (expense) => {
-    // Scroll to top to show the form
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setEditExpenseId(expense.id);
+    setShowEditModal(true);
+  };
 
-    // Set edit mode and populate form with expense data
-    setIsEditMode(true);
-    setEditingExpense(expense);
-    setFormData({
-      expenseDate: expense.expenseDate.split('T')[0],
-      paidTo: expense.paidTo,
-      reason: expense.reason || "",
-      amount: expense.amount.toString(),
-      GST: expense.GST || "",
-      TdsAmount: expense.TdsAmount ? expense.TdsAmount.toString() : "",
-      noOfDays: expense.noOfDays ? expense.noOfDays.toString() : "",
-      verified: expense.verified,
-      regionIds: expense.region_ids?.map(r => r.id) || [],
-      branchIds: expense.branch_ids?.map(b => b.id) || [],
-      centreIds: expense.centre_ids?.map(c => c.id) || [],
-      bankAccount: expense.bankAccount?.id || "",
-    });
-
-    // Clear any previous messages
-    setError("");
-    setSuccess("");
+  const handleEditModalSave = async (updatedData) => {
+    setIsLoading(true);
+    try {
+      await adExpenseAPI.updateAdExpense(editExpenseId, updatedData);
+      setSuccess("Expense updated successfully!");
+      setShowEditModal(false);
+      setEditExpenseId(null);
+      fetchExpenses();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.message || "Failed to update expense");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -864,7 +863,7 @@ setFilteredExpenses(normalizedExpenses);
           <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-40">
             <div className="bg-white rounded-lg p-6 text-center ">
               <div className="w-8 h-8 border-3 border-orange-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-700 font-medium">Adding Expense...</p>
+              <p className="text-gray-700 font-medium">Processing...</p>
               <p className="text-gray-500 text-sm mt-1">Please wait</p>
             </div>
           </div>
@@ -985,6 +984,26 @@ setFilteredExpenses(normalizedExpenses);
           handleConfirmSubmit={handleConfirmSubmit}
           isEditMode={isEditMode}
         />
+
+        {showEditModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-xl">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 z-10"
+              >
+                <FiX size={24} />
+              </button>
+              <EditExpenseModal
+                expenseId={editExpenseId}
+                onSave={handleEditModalSave}
+                onClose={() => setShowEditModal(false)}
+                centres={centres}
+                currentUser={currentUser}
+              />
+            </div>
+          </div>
+        )}
 
         <ExcelImportModal
           showExcelImport={showExcelImport}

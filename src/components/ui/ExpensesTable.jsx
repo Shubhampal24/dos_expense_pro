@@ -96,8 +96,8 @@ const activeFilteredExpenses = filteredExpenses.filter(
       bankAccount: expense.bankAccount,
       GST: expense.GST,
       TdsAmount: expense.TdsAmount,
-      region_names: expense.region_names,
-      branch_names: expense.names_ids,
+      region_ids: expense.region_ids,
+      branch_ids: expense.branch_ids,
       centre_ids: expense.centre_ids,
       createdBy: expense.createdBy,
       createdAt: expense.createdAt,
@@ -324,38 +324,38 @@ const activeFilteredExpenses = filteredExpenses.filter(
             </div>
           ) : (
             <div className="bg-white rounded-lg border overflow-hidden">
-              <div className="max-h-[480px] overflow-y-auto overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <table className="w-full table-fixed min-w-[1100px]">
+              <div className="max-h-[480px] overflow-y-auto overflow-x-auto">
+                <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="w-[110px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Date
                       </th>
-                      <th className="w-[140px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Paid To
                       </th>
-                      <th className="w-[140px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Amount
                       </th>
-                      <th className="w-[170px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Bank Account
                       </th>
-                      <th className="w-[220px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Locations
                       </th>
-                      <th className="w-[200px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Reason
                       </th>
-                      <th className="w-[90px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         No Of Day's
                       </th>
-                      <th className="w-[120px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Created By
                       </th>
-                      <th className="w-[110px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Created
                       </th>
-                      <th className="w-[90px] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -370,15 +370,15 @@ const activeFilteredExpenses = filteredExpenses.filter(
                           index % 2 === 0 ? "bg-white" : "bg-gray-50"
                         }
                       >
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 align-top">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {new Date(expense.expenseDate).toLocaleDateString(
                             "en-IN"
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 capitalize align-top">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 capitalize">
                           {highlightText(expense.paidTo, searchTerm)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 align-top">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                           {expense.paidTo === "justdial" ? (
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
@@ -448,7 +448,7 @@ const activeFilteredExpenses = filteredExpenses.filter(
                             )
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 align-top">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {expense.bankAccount ? (
                             <div className="flex flex-col space-y-1">
                               <span className="text-xs font-medium text-blue-700">
@@ -470,29 +470,22 @@ const activeFilteredExpenses = filteredExpenses.filter(
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 align-top">
-                          <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
-                            {(expense.region_names?.length > 0 ||
-                              expense.branch_names?.length > 0 ||
-                              expense.centre_ids?.length > 0) && (
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="text-xs font-medium text-gray-600">
-                                  Locations:
-                                </div>
-                                <button
-                                  onClick={() => openLocationModal(expense)}
-                                  className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
-                                >
-                                  <MapPinIcon className="w-3 h-3" />
-                                  <span>View All</span>
-                                </button>
-                              </div>
-                            )}
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="max-h-24 overflow-y-auto space-y-1">
                             {/* Regions */}
                             {expense.region_names?.length > 0 && (
   <div>
-    <div className="text-xs font-medium text-gray-600 mb-1">
-      Regions ({expense.region_names.length}):
+    <div className="flex items-center justify-between mb-1">
+      <div className="text-xs font-medium text-gray-600">
+        Regions ({expense.region_names.length}):
+      </div>
+      <button
+        onClick={() => openLocationModal(expense)}
+        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+      >
+        <MapPinIcon className="w-3 h-3" />
+        <span>View All</span>
+      </button>
     </div>
 
     <div className="flex flex-wrap gap-1 mb-2">
@@ -511,8 +504,17 @@ const activeFilteredExpenses = filteredExpenses.filter(
                             {/* Branches */}
                             {expense.branch_names?.length > 0 && (
   <div>
-    <div className="text-xs font-medium text-gray-600 mb-1">
-      Areas ({expense.branch_names.length}):
+    <div className="flex items-center justify-between mb-1">
+      <div className="text-xs font-medium text-gray-600">
+        Areas ({expense.branch_names.length}):
+      </div>
+      <button
+        onClick={() => openLocationModal(expense)}
+        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+      >
+        <MapPinIcon className="w-3 h-3" />
+        <span>View All</span>
+      </button>
     </div>
 
     <div className="flex flex-wrap gap-1 mb-2">
@@ -531,8 +533,17 @@ const activeFilteredExpenses = filteredExpenses.filter(
                             {/* Centres */}
                             {expense.centre_ids?.length > 0 && (
   <div>
-    <div className="text-xs font-medium text-gray-600 mb-1">
-      Centres ({expense.centre_ids.length}):
+    <div className="flex items-center justify-between mb-1">
+      <div className="text-xs font-medium text-gray-600">
+        Centres ({expense.centre_ids.length}):
+      </div>
+      <button
+        onClick={() => openLocationModal(expense)}
+        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+      >
+        <MapPinIcon className="w-3 h-3" />
+        <span>View All</span>
+      </button>
     </div>
 
     <div className="flex flex-wrap gap-1">
@@ -550,17 +561,17 @@ const activeFilteredExpenses = filteredExpenses.filter(
 
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 align-top">
+                        <td className="px-4 py-3 text-sm text-gray-900 max-w-xs">
                           <div className="truncate" title={expense.reason}>
                             {highlightText(expense.reason, searchTerm)}
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 align-top">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           <div className="truncate" title={expense.noOfDays}>
                             {highlightText(expense.noOfDays?.toString() || '0', searchTerm)}
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap align-top">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${expense.verified
                               ? "bg-green-100 text-green-800"
@@ -571,12 +582,12 @@ const activeFilteredExpenses = filteredExpenses.filter(
 
                           </span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 align-top">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           {new Date(expense.createdAt).toLocaleDateString(
                             "en-IN"
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 align-top">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center justify-center space-x-2">
                             <button
                               onClick={() => handleEditExpense(expense)}
