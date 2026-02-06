@@ -60,7 +60,7 @@ const AdminAnalysis = () => {
     selectedYear: "",
     startDate: "",
     endDate: "",
-    userId: "",
+    // userId: "",
   });
   const [selectedView, setSelectedView] = useState("overview"); // overview, timeanalysis, trends, charts, userwise, table
   const [searchTerm, setSearchTerm] = useState("");
@@ -89,6 +89,13 @@ const AdminAnalysis = () => {
     }
   }, [hasAdminAccess]);
 
+  // Auto-load bank analysis when switching to the bank analysis tab
+  useEffect(() => {
+    if (selectedView === "bankanalysis" && hasAdminAccess) {
+      fetchBankAnalysis();
+    }
+  }, [selectedView, hasAdminAccess]);
+
   const fetchUsers = async () => {
     try {
       const response = await userAPI.getAllUsers();
@@ -103,51 +110,54 @@ const AdminAnalysis = () => {
 
     setLoading(true);
     setError(null);
+
+    console.log("🔍 [AdminAnalysis] Current filters state:", filters);
+
     try {
       const params = {
         page: currentPage,
         limit: pageLimit,
       };
 
-      // Process filter parameters to match backend API format
-      if (filters.selectedDate) {
-        params.selectedDate = filters.selectedDate; // YYYY-MM-DD format
-      }
+      // ⚠️ Backend accepts ONLY ONE date strategy at a time
+      if (filters.startDate && filters.endDate) {
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
 
-      if (filters.selectedMonth) {
-        // Convert "2025-03" to month: 3, year: 2025
+
+      } else if (filters.selectedDate) {
+        params.selectedDate = filters.selectedDate;
+
+      } else if (filters.selectedMonth) {
         const [year, month] = filters.selectedMonth.split("-");
         if (year && month) {
-          params.selectedMonth = parseInt(month, 10);
-          params.selectedYear = parseInt(year, 10);
+          params.selectedMonth = Number(month);
+          params.selectedYear = Number(year);
         }
-      }
 
-      if (filters.selectedQuarter) {
-        // Convert "2025-Q1" to quarter: 1, year: 2025
+      } else if (filters.selectedQuarter) {
         const [year, quarter] = filters.selectedQuarter.split("-Q");
         if (year && quarter) {
-          params.selectedQuarter = parseInt(quarter, 10);
-          params.selectedYear = parseInt(year, 10);
+          params.selectedQuarter = Number(quarter);
+          params.selectedYear = Number(year);
         }
+
+      } else if (filters.selectedYear) {
+        params.selectedYear = Number(filters.selectedYear);
       }
 
-      if (
-        filters.selectedYear &&
-        !filters.selectedMonth &&
-        !filters.selectedQuarter
-      ) {
-        // Only year filter (no month or quarter selected)
-        params.selectedYear = parseInt(filters.selectedYear, 10);
-      }
+      // Clean up any empty parameters
+      Object.keys(params).forEach(
+        key => (params[key] === "" || params[key] === undefined) && delete params[key]
+      );
 
-      // Explicit date range (takes precedence when provided)
-      if (filters.startDate && filters.endDate) {
-        params.startDate = filters.startDate; // YYYY-MM-DD
-        params.endDate = filters.endDate; // YYYY-MM-DD
-      }
+      console.log("📤 [AdminAnalysis] Sending params to backend:", params);
 
       const response = await adExpenseAPI.getHeadDashboard(params);
+
+      console.log("📊 [HEAD Dashboard] Full Response:", response);
+      console.log("📊 [HEAD Dashboard] Table Data:", response.tableData);
+      console.log("📊 [HEAD Dashboard] Sample Expense:", response.tableData?.data?.[0]);
 
       setDashboardData(response);
       setTableData(response.tableData);
@@ -185,8 +195,14 @@ const AdminAnalysis = () => {
 
       setAnalysisData(analysisData);
       setError(null);
-    } catch (error) {
-      setError(error.message || "Failed to fetch dashboard data");
+    } catch (err) {
+      console.error("❌ [AdminAnalysis] Error fetching dashboard data:", err);
+      console.error("❌ [AdminAnalysis] Error details:", {
+        message: err.message,
+        response: err.response,
+        stack: err.stack
+      });
+      setError(err.message || "Failed to load dashboard data");
       setDashboardData(null);
       setAnalysisData(null);
     } finally {
@@ -202,40 +218,36 @@ const AdminAnalysis = () => {
         unit: timeUnit,
       };
 
-      // Process filter parameters to match backend API format
-      if (filters.selectedDate) {
-        params.selectedDate = filters.selectedDate; // YYYY-MM-DD format
-      }
 
-      if (filters.selectedMonth) {
-        // Convert "2025-03" to month: 3, year: 2025
+
+      // ⚠️ Backend allows ONLY ONE date strategy
+      if (filters.startDate && filters.endDate) {
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
+
+      } else if (filters.selectedDate) {
+        params.selectedDate = filters.selectedDate;
+
+      } else if (filters.selectedMonth) {
         const [year, month] = filters.selectedMonth.split("-");
-        if (year && month) {
-          params.selectedMonth = parseInt(month, 10);
-          params.selectedYear = parseInt(year, 10);
-        }
-      }
+        params.selectedMonth = Number(month);
+        params.selectedYear = Number(year);
 
-      if (filters.selectedQuarter) {
-        // Convert "2025-Q1" to quarter: 1, year: 2025
+      } else if (filters.selectedQuarter) {
         const [year, quarter] = filters.selectedQuarter.split("-Q");
-        if (year && quarter) {
-          params.selectedQuarter = parseInt(quarter, 10);
-          params.selectedYear = parseInt(year, 10);
-        }
-      }
+        params.selectedQuarter = Number(quarter);
+        params.selectedYear = Number(year);
 
-      if (
-        filters.selectedYear &&
-        !filters.selectedMonth &&
-        !filters.selectedQuarter
-      ) {
-        // Only year filter (no month or quarter selected)
-        params.selectedYear = parseInt(filters.selectedYear, 10);
+      } else if (filters.selectedYear) {
+        params.selectedYear = Number(filters.selectedYear);
       }
 
       // Use the HEAD time analysis API endpoint
       const response = await adExpenseAPI.getHeadUsersAnalysisByTime(params);
+
+      console.log("📅 [Time Analysis] Full Response:", response);
+      console.log("📅 [Time Analysis] Analysis Array:", response.analysis);
+      console.log("📅 [Time Analysis] First Period:", response.analysis?.[0]);
 
       setTimeAnalysisData(response);
       setError(null);
@@ -252,10 +264,10 @@ const AdminAnalysis = () => {
 
     try {
       setLoading(true);
-      
+
       // Prepare filters for the bank analysis API
       const analysisFilters = {};
-      
+
       // Add date filters if available
       if (filters.startDate) {
         analysisFilters.startDate = filters.startDate;
@@ -281,19 +293,25 @@ const AdminAnalysis = () => {
 
       // Fetch comprehensive bank account analysis using the dedicated API
       const bankAnalysisResponse = await bankAccountAPI.getAllBankAccountsAnalysis(analysisFilters);
-      console.log("Bank Analysis Response:", bankAnalysisResponse);
+
+      // console.log("🔍 [Bank Analysis] Full API Response:", bankAnalysisResponse);
+      // console.log("🔍 [Bank Analysis] Response type:", typeof bankAnalysisResponse);
+      // console.log("🔍 [Bank Analysis] Has summary?", !!bankAnalysisResponse?.summary);
+      // console.log("🔍 [Bank Analysis] Has bankAccounts?", !!bankAnalysisResponse?.bankAccounts);
+      // console.log("🔍 [Bank Analysis] bankAccounts length:", bankAnalysisResponse?.bankAccounts?.length);
+
       if (bankAnalysisResponse) {
         // Transform the API response to match the expected format for the UI
         const transformedData = {
           summary: {
-            totalBankAccounts: bankAnalysisResponse.summary?.totalBankAccounts || 0,
-            activeBankAccounts: bankAnalysisResponse.summary?.activeAccounts || 0,
+            totalBankAccounts: bankAnalysisResponse.summary?.totalBankAccounts || bankAnalysisResponse.bankAccounts?.length || 0,
+            activeBankAccounts: bankAnalysisResponse.summary?.activeAccounts || bankAnalysisResponse.bankAccounts?.filter(b => b.isActive).length || 0,
             totalPaymentsAmount: (bankAnalysisResponse.summary?.totalTransactionAmount || 0) + (bankAnalysisResponse.summary?.totalExpenseAmount || 0),
             totalPaymentsCount: (bankAnalysisResponse.summary?.totalTransactions || 0) + (bankAnalysisResponse.summary?.totalExpenses || 0),
-            totalLinkedExpenses: bankAnalysisResponse.summary?.totalExpenses || 0,
+            totalLinkedExpenses: bankAnalysisResponse.summary?.totalExpenses || bankAnalysisResponse.bankAccounts?.reduce((sum, b) => sum + (b.totalLinkedExpenses || 0), 0) || 0,
             totalLinkedExpenseAmount: bankAnalysisResponse.summary?.totalExpenseAmount || 0,
             totalNetFlow: bankAnalysisResponse.summary?.totalNetFlow || 0,
-            totalUniqueUsers: bankAnalysisResponse.summary?.totalUniqueUsers || 0,
+            totalUniqueUsers: bankAnalysisResponse.summary?.totalUniqueUsers || new Set(bankAnalysisResponse.bankAccounts?.map(b => b.userId).filter(Boolean)).size || 0,
             accountsWithNegativeNetFlow: bankAnalysisResponse.summary?.accountsWithNegativeNetFlow || 0,
             accountsWithPositiveNetFlow: bankAnalysisResponse.summary?.accountsWithPositiveNetFlow || 0,
           },
@@ -313,52 +331,56 @@ const AdminAnalysis = () => {
             totalAmount: bank.totalTransactionAmount || 0,
             paymentCount: bank.totalTransactions || 0,
             avgPayment: bank.averageTransactionAmount || 0,
-            
+
             // Linked expense data (more comprehensive)
             totalLinkedExpenses: bank.totalLinkedExpenses || 0,
             totalLinkedExpenseAmount: bank.totalLinkedExpenseAmount || 0,
             averageLinkedExpenseAmount: bank.averageLinkedExpenseAmount || 0,
             linkedExpenseBreakdown: bank.linkedExpenseBreakdown || {},
-            
+
             // Performance metrics
             performanceMetrics: bank.performanceMetrics || {},
             netFlow: bank.netFlow || 0,
-            
+
             // Admin insights
             adminInsights: bank.adminInsights || {},
-            
+
             // Utilization calculations
             utilizationRate: bank.performanceMetrics?.accountUtilization || 0,
             transactionVelocity: bank.performanceMetrics?.transactionVelocity || 0,
             linkedExpenseVelocity: bank.performanceMetrics?.linkedExpenseVelocity || 0,
-            
+
             // Date ranges
             transactionDateRange: bank.transactionDateRange || { earliest: null, latest: null },
             expenseDateRange: bank.expenseDateRange || { earliest: null, latest: null },
-            
+
             // Associated data
             associatedTids: bank.associatedTids || 0,
             tidNumbers: bank.tidNumbers || [],
-            
+
             // User information
             user: bank.userId || {},
-            
+
             // Monthly analysis
             monthlyTransactionAnalysis: bank.monthlyTransactionAnalysis || [],
             monthlyExpenseAnalysis: bank.monthlyExpenseAnalysis || [],
-            
+
             // Centre analysis
             centreAnalysis: bank.centreAnalysis || [],
-            
+
             lastUsed: bank.transactionDateRange?.latest || bank.expenseDateRange?.latest,
             transactions: bank.recentTransactions || []
           }))
         };
 
+        // console.log("✅ [Bank Analysis] Transformed Data:", transformedData);
+        // console.log("✅ [Bank Analysis] Summary:", transformedData.summary);
+        // console.log("✅ [Bank Analysis] Bank Analysis Array Length:", transformedData.bankAnalysis.length);
+
         setBankAnalysisData(transformedData);
         setBankAccounts(bankAnalysisResponse.bankAccounts || []);
       }
-      
+
       setError(null);
     } catch (error) {
       console.error('Bank analysis fetch error:', error);
@@ -379,50 +401,11 @@ const AdminAnalysis = () => {
   };
 
   const applyFilters = () => {
-    // Show processed parameters that will be sent to API
-    const processedParams = {};
-
-    if (filters.selectedDate) {
-      processedParams.selectedDate = filters.selectedDate;
-    }
-
-    if (filters.selectedMonth) {
-      const [year, month] = filters.selectedMonth.split("-");
-      if (year && month) {
-        processedParams.selectedMonth = parseInt(month, 10);
-        processedParams.selectedYear = parseInt(year, 10);
-      }
-    }
-
-    if (filters.selectedQuarter) {
-      const [year, quarter] = filters.selectedQuarter.split("-Q");
-      if (year && quarter) {
-        processedParams.selectedQuarter = parseInt(quarter, 10);
-        processedParams.selectedYear = parseInt(year, 10);
-      }
-    }
-
-    if (
-      filters.selectedYear &&
-      !filters.selectedMonth &&
-      !filters.selectedQuarter
-    ) {
-      processedParams.selectedYear = parseInt(filters.selectedYear, 10);
-    }
-
-    if (filters.startDate && filters.endDate) {
-      processedParams.startDate = filters.startDate;
-      processedParams.endDate = filters.endDate;
-    }
-
-    // Count active filters
-    const activeFilters = Object.entries(filters).filter(
-      ([key, value]) => value && value.trim() !== ""
-    ).length;
-
-    setCurrentPage(1); // Reset to first page when applying filters
+    // Backend-safe: only trigger dashboard reload
+    setCurrentPage(1);
     fetchDashboardData();
   };
+
 
   const resetFilters = () => {
     setFilters({
@@ -432,7 +415,7 @@ const AdminAnalysis = () => {
       selectedYear: "",
       startDate: "",
       endDate: "",
-      userId: "",
+      // userId: "",
     });
     setCurrentPage(1);
     setTimeout(() => fetchDashboardData(), 100);
@@ -461,31 +444,30 @@ const AdminAnalysis = () => {
 
     return analysisData
       .map((period, index) => {
+        // Backend returns { period: "2026-01-01 00:00:00+00", totalAmount, count }
+        if (!period || !period.period) return null;
+
+        const periodDate = new Date(period.period);
         let periodLabel = "";
         let sortKey = "";
 
         if (timeUnit === "month") {
-          const date = new Date(period.id.year, period.id.month - 1);
-          periodLabel = date.toLocaleDateString("en-IN", {
+          periodLabel = periodDate.toLocaleDateString("en-IN", {
             year: "numeric",
             month: "short",
           });
-          sortKey = `${period.id.year}-${String(period.id.month).padStart(
-            2,
-            "0"
-          )}`;
+          sortKey = `${periodDate.getFullYear()}-${String(periodDate.getMonth() + 1).padStart(2, "0")}`;
         } else if (timeUnit === "week") {
-          periodLabel = `${period.id.year} W${period.id.week}`;
-          sortKey = `${period.id.year}-W${String(period.id.week).padStart(
-            2,
-            "0"
-          )}`;
+          const weekNum = Math.ceil((periodDate.getDate() + new Date(periodDate.getFullYear(), periodDate.getMonth(), 1).getDay()) / 7);
+          periodLabel = `${periodDate.getFullYear()} W${weekNum}`;
+          sortKey = `${periodDate.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
         } else if (timeUnit === "quarter") {
-          periodLabel = `${period.id.year} Q${period.id.quarter}`;
-          sortKey = `${period.id.year}-Q${period.id.quarter}`;
+          const quarter = Math.ceil((periodDate.getMonth() + 1) / 3);
+          periodLabel = `${periodDate.getFullYear()} (Q${quarter})`;
+          sortKey = `${periodDate.getFullYear()}-Q${quarter}`;
         } else if (timeUnit === "year") {
-          periodLabel = `${period.id.year}`;
-          sortKey = `${period.id.year}`;
+          periodLabel = `${periodDate.getFullYear()}`;
+          sortKey = `${periodDate.getFullYear()}`;
         }
 
         return {
@@ -499,6 +481,7 @@ const AdminAnalysis = () => {
           displayAverage: formatCurrency(period.totalAmount / period.count),
         };
       })
+      .filter(Boolean) // Remove null entries
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   };
 
@@ -668,7 +651,7 @@ const AdminAnalysis = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
@@ -907,9 +890,9 @@ const AdminAnalysis = () => {
                       </select>
                     </div>
                   </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
             {/* View Tabs */}
             <div className="bg-white rounded-lg  border border-gray-200 mb-6">
@@ -938,11 +921,10 @@ const AdminAnalysis = () => {
                           fetchBankAnalysis();
                         }
                       }}
-                      className={`${
-                        selectedView === tab.id
-                          ? 'border-amber-500 text-amber-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors`}
+                      className={`${selectedView === tab.id
+                        ? 'border-amber-500 text-amber-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors`}
                     >
                       <tab.icon className="text-sm" />
                       {tab.label}
@@ -1052,13 +1034,12 @@ const AdminAnalysis = () => {
                                 >
                                   <div className="flex items-center gap-2">
                                     <span
-                                      className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
-                                        index === 0
-                                          ? "bg-yellow-500 text-white"
-                                          : index === 1
+                                      className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${index === 0
+                                        ? "bg-yellow-500 text-white"
+                                        : index === 1
                                           ? "bg-gray-400 text-white"
                                           : "bg-orange-500 text-white"
-                                      }`}
+                                        }`}
                                     >
                                       {index + 1}
                                     </span>
@@ -1073,11 +1054,11 @@ const AdminAnalysis = () => {
                               ))}
                             {(!analysisData?.topPerformers?.byAmount ||
                               analysisData.topPerformers.byAmount.length === 0) && (
-                              <div className="text-sm text-amber-600 text-center py-4">
-                                <FiInfo className="mx-auto text-2xl mb-2" />
-                                No performance data available
-                              </div>
-                            )}
+                                <div className="text-sm text-amber-600 text-center py-4">
+                                  <FiInfo className="mx-auto text-2xl mb-2" />
+                                  No performance data available
+                                </div>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -1137,7 +1118,7 @@ const AdminAnalysis = () => {
                                 </p>
                               </div>
                             </div>
-                            
+
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600 flex items-center gap-1">
@@ -1148,7 +1129,7 @@ const AdminAnalysis = () => {
                                   {formatCurrency(user.totalAmount || 0)}
                                 </span>
                               </div>
-                              
+
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600 flex items-center gap-1">
                                   <FiActivity className="text-blue-500" />
@@ -1158,7 +1139,7 @@ const AdminAnalysis = () => {
                                   {user.totalEntries || 0}
                                 </span>
                               </div>
-                              
+
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600 flex items-center gap-1">
                                   <FiTrendingUp className="text-purple-500" />
@@ -1209,8 +1190,8 @@ const AdminAnalysis = () => {
                         )}
                       </div>
                     )}
-              </div>
-            )}
+                  </div>
+                )}
 
                 {/* Bank Analysis Tab */}
                 {selectedView === "bankanalysis" && (
@@ -1229,9 +1210,8 @@ const AdminAnalysis = () => {
                         <button
                           onClick={fetchBankAnalysis}
                           disabled={loading}
-                          className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-400 to-amber-400 text-white font-semibold rounded-lg hover:from-orange-500 hover:to-amber-500 transition-all duration-200 ${
-                            loading ? 'opacity-75 cursor-not-allowed' : ''
-                          }`}
+                          className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-400 to-amber-400 text-white font-semibold rounded-lg hover:from-orange-500 hover:to-amber-500 transition-all duration-200 ${loading ? 'opacity-75 cursor-not-allowed' : ''
+                            }`}
                         >
                           <FiRefreshCw className={loading ? 'animate-spin' : ''} />
                           {loading ? 'Loading...' : 'Refresh Analysis'}
@@ -1269,7 +1249,7 @@ const AdminAnalysis = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
@@ -1333,10 +1313,10 @@ const AdminAnalysis = () => {
                         </h4>
                         <div className="h-80">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart 
+                            <BarChart
                               data={bankAnalysisData.bankAnalysis.map(bank => ({
-                                name: bank.account.bankName.length > 15 
-                                  ? bank.account.bankName.substring(0, 15) + '...' 
+                                name: bank.account.bankName.length > 15
+                                  ? bank.account.bankName.substring(0, 15) + '...'
                                   : bank.account.bankName,
                                 fullName: bank.account.bankName,
                                 linkedExpenses: bank.totalLinkedExpenseAmount || 0,
@@ -1348,9 +1328,9 @@ const AdminAnalysis = () => {
                               margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                             >
                               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                              <XAxis 
-                                dataKey="name" 
-                                stroke="#6b7280" 
+                              <XAxis
+                                dataKey="name"
+                                stroke="#6b7280"
                                 fontSize={11}
                                 angle={-45}
                                 textAnchor="end"
@@ -1360,8 +1340,8 @@ const AdminAnalysis = () => {
                               <Tooltip
                                 formatter={(value, name) => [
                                   formatCurrency(value),
-                                  name === 'linkedExpenses' ? 'Total Linked Expenses' : 
-                                  name === 'adExpenses' ? 'Ad Expenses' : 'Regular Expenses'
+                                  name === 'linkedExpenses' ? 'Total Linked Expenses' :
+                                    name === 'adExpenses' ? 'Ad Expenses' : 'Regular Expenses'
                                 ]}
                                 labelFormatter={(label, payload) => {
                                   const data = payload?.[0]?.payload;
@@ -1375,17 +1355,17 @@ const AdminAnalysis = () => {
                                 }}
                               />
                               <Legend wrapperStyle={{ fontSize: "11px" }} />
-                              <Bar 
-                                dataKey="adExpenses" 
+                              <Bar
+                                dataKey="adExpenses"
                                 stackId="expenses"
-                                fill="#8b5cf6" 
+                                fill="#8b5cf6"
                                 name="Ad Expenses"
                                 radius={[0, 0, 0, 0]}
                               />
-                              <Bar 
-                                dataKey="regularExpenses" 
+                              <Bar
+                                dataKey="regularExpenses"
                                 stackId="expenses"
-                                fill="#06b6d4" 
+                                fill="#06b6d4"
                                 name="Regular Expenses"
                                 radius={[2, 2, 0, 0]}
                               />
@@ -1452,11 +1432,10 @@ const AdminAnalysis = () => {
                                 </p>
                               </div>
                               <div className="text-right">
-                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                  bankData.account.isActive
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bankData.account.isActive
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                                  }`}>
                                   {bankData.account.isActive ? 'Active' : 'Inactive'}
                                 </span>
                                 <div className="mt-2">
@@ -1476,7 +1455,7 @@ const AdminAnalysis = () => {
 
                             {/* Enhanced Statistics Grid */}
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                              
+
 
                               {/* Linked Expenses */}
                               <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
@@ -1510,7 +1489,7 @@ const AdminAnalysis = () => {
                                 </div>
                               </div>
 
-                              
+
 
                               {/* Average Expense */}
                               <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3">
@@ -1526,7 +1505,7 @@ const AdminAnalysis = () => {
                               </div>
                             </div>
 
-                          
+
 
                             {/* Date Ranges */}
                             <div className="bg-blue-50 rounded-lg p-4 mb-6">
@@ -1578,7 +1557,7 @@ const AdminAnalysis = () => {
                               </div>
                             )}
 
-                           
+
                           </div>
                         ))}
                       </div>
@@ -1593,11 +1572,10 @@ const AdminAnalysis = () => {
                         </p>
                         <button
                           onClick={fetchBankAnalysis}
-                          className={`px-4 py-2 rounded-lg transition-colors ${
-                            error 
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          }`}
+                          className={`px-4 py-2 rounded-lg transition-colors ${error
+                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            }`}
                         >
                           {error ? 'Retry Analysis' : 'Load Bank Analysis'}
                         </button>
@@ -1632,7 +1610,7 @@ const AdminAnalysis = () => {
                               setCurrentPage(1);
                               setTimeout(() => fetchDashboardData(), 100);
                             }}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
                           >
                             <option value={10}>10</option>
                             <option value={25}>25</option>
@@ -1721,11 +1699,10 @@ const AdminAnalysis = () => {
                                 </td>
                                 <td className="px-4 py-4">
                                   <span
-                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      expense.verified
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                                    }`}
+                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${expense.verified
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                      }`}
                                   >
                                     {expense.verified ? (
                                       <>
@@ -1765,8 +1742,8 @@ const AdminAnalysis = () => {
                               </tr>
                             ))}
                           </tbody>
-                    </table>
-                  </div>
+                        </table>
+                      </div>
 
                       {/* Pagination */}
                       <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
@@ -1782,11 +1759,10 @@ const AdminAnalysis = () => {
                               }
                             }}
                             disabled={!tableData.pagination.hasPrev}
-                            className={`px-4 py-2 text-sm rounded-lg border transition-colors ${
-                              tableData.pagination.hasPrev
-                                ? "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                                : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                            }`}
+                            className={`px-4 py-2 text-sm rounded-lg border transition-colors ${tableData.pagination.hasPrev
+                              ? "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                              : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                              }`}
                           >
                             Previous
                           </button>
@@ -1801,273 +1777,285 @@ const AdminAnalysis = () => {
                               }
                             }}
                             disabled={!tableData.pagination.hasNext}
-                            className={`px-4 py-2 text-sm rounded-lg border transition-colors ${
-                              tableData.pagination.hasNext
-                                ? "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                                : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                            }`}
+                            className={`px-4 py-2 text-sm rounded-lg border transition-colors ${tableData.pagination.hasNext
+                              ? "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                              : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                              }`}
                           >
                             Next
                           </button>
                         </div>
                       </div>
-                </div>
-              </div>
-            )}
-
-            {/* Monthly Trends Tab */}
-            {selectedView === "trends" && dashboardData && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Monthly Expense Trends for HEAD Users
-                </h3>
-
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                            Month
-                          </th>
-                          <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                            Amount
-                          </th>
-                          <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                            Entries
-                          </th>
-                          <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                            Users
-                          </th>
-                          <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                            Avg
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {dashboardData.monthlyTrend &&
-                          dashboardData.monthlyTrend.map((month, index) => {
-                            // Handle month display based on API response format
-                            let monthDisplay = "N/A";
-                            if (month.month) {
-                              // API returns format like "2025-08"
-                              monthDisplay = new Date(
-                                month.month + "-01"
-                              ).toLocaleDateString("en-IN", {
-                                year: "numeric",
-                                month: "short",
-                              });
-                            }
-
-                            return (
-                              <tr
-                                key={month.month || index}
-                                className={
-                                  index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                }
-                              >
-                                <td className="px-2 py-2">
-                                  <div className="text-xs font-medium text-gray-900">
-                                    {monthDisplay}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-2">
-                                  <div className="text-xs font-medium text-gray-900">
-                                    {formatCurrency(month.totalAmount || 0)}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-2">
-                                  <div className="text-xs text-gray-900">
-                                    {month.totalEntries || 0}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-2">
-                                  <div className="text-xs text-gray-900">
-                                    {month.activeUsers || "N/A"}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-2">
-                                  <div className="text-xs text-gray-900">
-                                    {month.totalEntries > 0
-                                      ? formatCurrency(
-                                          month.totalAmount / month.totalEntries
-                                        )
-                                      : formatCurrency(0)}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Time Analysis Tab */}
-            {selectedView === "timeanalysis" && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-800">
-                    HEAD Users Expense Analysis by Time
-                  </h3>
-                  <button
-                    onClick={fetchTimeAnalysisData}
-                    className="px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-1 text-xs"
-                  >
-                    <FiRefreshCw className="text-xs" />
-                    Refresh
-                  </button>
-                </div>
-
-                {/* Time Analysis Filters */}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Time Unit
-                      </label>
-                      <select
-                        value={timeUnit}
-                        onChange={(e) => {
-                          setTimeUnit(e.target.value);
-                          // Auto-refresh when time unit changes
-                          setTimeout(() => fetchTimeAnalysisData(), 100);
-                        }}
-                        className="w-full px-2 py-1 text-black text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-                      >
-                        <option value="month">Monthly</option>
-                        <option value="week">Weekly</option>
-                        <option value="quarter">Quarterly</option>
-                        <option value="year">Yearly</option>
-                      </select>
                     </div>
+                  </div>
+                )}
 
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Analysis Scope
-                      </label>
-                      <div className="w-full px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-xs font-medium">
-                        📊 HEAD Users Only
+                {/* Monthly Trends Tab */}
+                {selectedView === "trends" && dashboardData && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      Monthly Expense Trends for HEAD Users
+                    </h3>
+
+                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                Month
+                              </th>
+                              <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                Amount
+                              </th>
+                              <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                Entries
+                              </th>
+                              <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                Users
+                              </th>
+                              <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                Avg
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {dashboardData.monthlyTrend &&
+                              dashboardData.monthlyTrend.map((month, index) => {
+                                // Handle month display based on API response format
+                                let monthDisplay = "N/A";
+                                if (month.month) {
+                                  // API returns format like "2025-08"
+                                  monthDisplay = new Date(
+                                    month.month + "-01"
+                                  ).toLocaleDateString("en-IN", {
+                                    year: "numeric",
+                                    month: "short",
+                                  });
+                                }
+
+                                return (
+                                  <tr
+                                    key={month.month || index}
+                                    className={
+                                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                    }
+                                  >
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs font-medium text-gray-900">
+                                        {monthDisplay}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs font-medium text-gray-900">
+                                        {formatCurrency(month.totalAmount || 0)}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs text-gray-900">
+                                        {month.totalEntries || 0}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs text-gray-900">
+                                        {month.activeUsers || "N/A"}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs text-gray-900">
+                                        {month.totalEntries > 0
+                                          ? formatCurrency(
+                                            month.totalAmount / month.totalEntries
+                                          )
+                                          : formatCurrency(0)}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Time Analysis Results */}
-                {timeAnalysisData ? (
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
-                      <h4 className="text-xs font-semibold text-gray-800">
-                        {timeUnit.charAt(0).toUpperCase() + timeUnit.slice(1)}ly
-                        Analysis for HEAD Users
-                      </h4>
-                      <p className="text-xs text-gray-600 mt-0.5">
-                        {timeAnalysisData.analysis?.length || 0} periods | Role:{" "}
-                        {timeAnalysisData.role || "HEAD"}
-                      </p>
+                {/* Time Analysis Tab */}
+                {selectedView === "timeanalysis" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-800">
+                        HEAD Users Expense Analysis by Time
+                      </h3>
+                      <button
+                        onClick={fetchTimeAnalysisData}
+                        className="px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-1 text-xs"
+                      >
+                        <FiRefreshCw className="text-xs" />
+                        Refresh
+                      </button>
                     </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                              Period
-                            </th>
-                            <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                              Amount
-                            </th>
-                            <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                              Entries
-                            </th>
-                            <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
-                              Average
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {timeAnalysisData.analysis?.map((period, index) => {
-                            let periodLabel = "";
-                            if (timeUnit === "month") {
-                              periodLabel = `${period.id.year}-${String(
-                                period.id.month
-                              ).padStart(2, "0")}`;
-                            } else if (timeUnit === "week") {
-                              periodLabel = `${period.id.year} W${period.id.week}`;
-                            } else if (timeUnit === "quarter") {
-                              periodLabel = `${period.id.year} Q${period.id.quarter}`;
-                            } else if (timeUnit === "year") {
-                              periodLabel = `${period.id.year}`;
-                            }
+                    {/* Time Analysis Filters */}
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Time Unit
+                          </label>
+                          <select
+                            value={timeUnit}
+                            onChange={(e) => {
+                              setTimeUnit(e.target.value);
+                              // Auto-refresh when time unit changes
+                              setTimeout(() => fetchTimeAnalysisData(), 100);
+                            }}
+                            className="w-full px-2 py-1 text-black text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                          >
+                            <option value="month">Monthly</option>
+                            <option value="week">Weekly</option>
+                            <option value="quarter">Quarterly</option>
+                            <option value="year">Yearly</option>
+                          </select>
+                        </div>
 
-                            return (
-                              <tr
-                                key={index}
-                                className={
-                                  index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                }
-                              >
-                                <td className="px-2 py-2">
-                                  <div className="text-xs font-medium text-gray-900">
-                                    {periodLabel}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-2">
-                                  <div className="text-xs font-medium text-gray-900">
-                                    {formatCurrency(period.totalAmount)}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-2">
-                                  <div className="text-xs text-gray-900">
-                                    {period.count}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-2">
-                                  <div className="text-xs text-gray-900">
-                                    {formatCurrency(
-                                      period.totalAmount / period.count
-                                    )}
-                                  </div>
-                                </td>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Analysis Scope
+                          </label>
+                          <div className="w-full px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-xs font-medium">
+                            📊 HEAD Users Only
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Time Analysis Results */}
+                    {timeAnalysisData ? (
+                      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
+                          <h4 className="text-xs font-semibold text-gray-800">
+                            {timeUnit.charAt(0).toUpperCase() + timeUnit.slice(1)}ly
+                            Analysis for HEAD Users
+                          </h4>
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            {timeAnalysisData.analysis?.length || 0} periods | Role:{" "}
+                            {timeAnalysisData.role || "HEAD"}
+                          </p>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                  Period
+                                </th>
+                                <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                  Amount
+                                </th>
+                                <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                  Entries
+                                </th>
+                                <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">
+                                  Average
+                                </th>
                               </tr>
-                            );
-                          })}
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {timeAnalysisData.analysis?.map((period, index) => {
+                                // Backend returns { period: "2026-01-01 00:00:00+00", totalAmount, count }
+                                // Parse the period timestamp string
+                                if (!period || !period.period) {
+                                  console.warn("⚠️ Invalid period data:", period);
+                                  return null;
+                                }
 
-                          {(!timeAnalysisData.analysis ||
-                            timeAnalysisData.analysis.length === 0) && (
-                            <tr>
-                              <td colSpan="4" className="px-2 py-4 text-center">
-                                <div className="text-gray-500">
-                                  <FiCalendar className="mx-auto text-lg mb-1" />
-                                  <p className="text-xs">
-                                    No HEAD user expense data found
-                                  </p>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-                    <FiCalendar className="mx-auto text-gray-400 text-2xl mb-2" />
-                    <p className="text-gray-600 mb-3 text-xs">
-                      Click "Refresh" to load HEAD users time analysis
-                    </p>
-                    <button
-                      onClick={fetchTimeAnalysisData}
-                      className="px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs"
-                    >
-                      Load HEAD Analysis
-                    </button>
+                                // Parse the period timestamp
+                                const periodDate = new Date(period.period);
+                                let periodLabel = "";
+
+                                if (timeUnit === "month") {
+                                  // Format: YYYY-MM
+                                  periodLabel = `${periodDate.getFullYear()}-${String(periodDate.getMonth() + 1).padStart(2, "0")}`;
+                                } else if (timeUnit === "week") {
+                                  // Calculate week number
+                                  const weekNum = Math.ceil((periodDate.getDate() + new Date(periodDate.getFullYear(), periodDate.getMonth(), 1).getDay()) / 7);
+                                  periodLabel = `${periodDate.getFullYear()} W${weekNum}`;
+                                } else if (timeUnit === "quarter") {
+                                  // Calculate quarter
+                                  const quarter = Math.ceil((periodDate.getMonth() + 1) / 3);
+                                  periodLabel = `${periodDate.getFullYear()} (Q${quarter})`;
+                                } else if (timeUnit === "year") {
+                                  periodLabel = `${periodDate.getFullYear()}`;
+                                }
+
+                                return (
+                                  <tr
+                                    key={index}
+                                    className={
+                                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                    }
+                                  >
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs font-medium text-gray-900">
+                                        {periodLabel}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs font-medium text-gray-900">
+                                        {formatCurrency(period.totalAmount)}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs text-gray-900">
+                                        {period.count}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div className="text-xs text-gray-900">
+                                        {formatCurrency(
+                                          period.totalAmount / period.count
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+
+                              {(!timeAnalysisData.analysis ||
+                                timeAnalysisData.analysis.length === 0) && (
+                                  <tr>
+                                    <td colSpan="4" className="px-2 py-4 text-center">
+                                      <div className="text-gray-500">
+                                        <FiCalendar className="mx-auto text-lg mb-1" />
+                                        <p className="text-xs">
+                                          No HEAD user expense data found
+                                        </p>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                        <FiCalendar className="mx-auto text-gray-400 text-2xl mb-2" />
+                        <p className="text-gray-600 mb-3 text-xs">
+                          Click "Refresh" to load HEAD users time analysis
+                        </p>
+                        <button
+                          onClick={fetchTimeAnalysisData}
+                          className="px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs"
+                        >
+                          Load HEAD Analysis
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
 
                 {/* Visual Charts Tab */}
                 {selectedView === "charts" && (
@@ -2093,7 +2081,7 @@ const AdminAnalysis = () => {
                               setTimeUnit(e.target.value);
                               setTimeout(() => fetchTimeAnalysisData(), 100);
                             }}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
                           >
                             <option value="month">Monthly</option>
                             <option value="week">Weekly</option>
@@ -2111,290 +2099,289 @@ const AdminAnalysis = () => {
                       </div>
                     </div>
 
-                {timeAnalysisData && timeAnalysisData.analysis?.length > 0 ? (
-                  <div className="space-y-3">
-                    {/* Chart Data Preparation */}
-                    {(() => {
-                      const chartData = prepareChartData(
-                        timeAnalysisData.analysis || []
-                      );
-                      const summaryStats = getSummaryStats(chartData);
+                    {timeAnalysisData && timeAnalysisData.analysis?.length > 0 ? (
+                      <div className="space-y-3">
+                        {/* Chart Data Preparation */}
+                        {(() => {
+                          const chartData = prepareChartData(
+                            timeAnalysisData.analysis || []
+                          );
+                          const summaryStats = getSummaryStats(chartData);
 
-                      return (
-                        <>
-                            {/* Summary Statistics Cards */}
-                            {summaryStats && (
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <p className="text-blue-100 text-sm font-medium">
-                                        Total Amount
-                                      </p>
-                                      <p className="text-2xl font-bold">
-                                        {formatCurrency(summaryStats.totalAmount)}
-                                      </p>
-                                    </div>
-                                    <div className="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center">
-                                      <FiDollarSign className="text-white" />
+                          return (
+                            <>
+                              {/* Summary Statistics Cards */}
+                              {summaryStats && (
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-blue-100 text-sm font-medium">
+                                          Total Amount
+                                        </p>
+                                        <p className="text-2xl font-bold">
+                                          {formatCurrency(summaryStats.totalAmount)}
+                                        </p>
+                                      </div>
+                                      <div className="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center">
+                                        <FiDollarSign className="text-white" />
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
 
-                                <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <p className="text-green-100 text-sm font-medium">
-                                        Total Entries
-                                      </p>
-                                      <p className="text-2xl font-bold">
-                                        {summaryStats.totalCount}
-                                      </p>
-                                    </div>
-                                    <div className="w-10 h-10 bg-green-400 rounded-full flex items-center justify-center">
-                                      <FiBarChart2 className="text-white" />
+                                  <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-green-100 text-sm font-medium">
+                                          Total Entries
+                                        </p>
+                                        <p className="text-2xl font-bold">
+                                          {summaryStats.totalCount}
+                                        </p>
+                                      </div>
+                                      <div className="w-10 h-10 bg-green-400 rounded-full flex items-center justify-center">
+                                        <FiBarChart2 className="text-white" />
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
 
-                                <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <p className="text-purple-100 text-sm font-medium">
-                                        Average Amount
-                                      </p>
-                                      <p className="text-2xl font-bold">
-                                        {formatCurrency(summaryStats.avgAmount)}
-                                      </p>
-                                    </div>
-                                    <div className="w-10 h-10 bg-purple-400 rounded-full flex items-center justify-center">
-                                      <FiTrendingUp className="text-white" />
+                                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-purple-100 text-sm font-medium">
+                                          Average Amount
+                                        </p>
+                                        <p className="text-2xl font-bold">
+                                          {formatCurrency(summaryStats.avgAmount)}
+                                        </p>
+                                      </div>
+                                      <div className="w-10 h-10 bg-purple-400 rounded-full flex items-center justify-center">
+                                        <FiTrendingUp className="text-white" />
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
 
-                                <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <p className="text-amber-100 text-sm font-medium">
-                                        Analysis Periods
-                                      </p>
-                                      <p className="text-2xl font-bold">
-                                        {summaryStats.periodsCount}
-                                      </p>
-                                      {summaryStats.trend && (
-                                        <p
-                                          className={`text-sm ${
-                                            summaryStats.trend.direction === "up"
+                                  <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-amber-100 text-sm font-medium">
+                                          Analysis Periods
+                                        </p>
+                                        <p className="text-2xl font-bold">
+                                          {summaryStats.periodsCount}
+                                        </p>
+                                        {summaryStats.trend && (
+                                          <p
+                                            className={`text-sm ${summaryStats.trend.direction === "up"
                                               ? "text-green-200"
                                               : "text-red-200"
-                                          }`}
-                                        >
-                                          {summaryStats.trend.direction === "up"
-                                            ? "↗"
-                                            : "↘"}{" "}
-                                          {summaryStats.trend.percent}% trend
-                                        </p>
-                                      )}
-                                    </div>
-                                    <div className="w-10 h-10 bg-amber-400 rounded-full flex items-center justify-center">
-                                      <FiCalendar className="text-white" />
+                                              }`}
+                                          >
+                                            {summaryStats.trend.direction === "up"
+                                              ? "↗"
+                                              : "↘"}{" "}
+                                            {summaryStats.trend.percent}% trend
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="w-10 h-10 bg-amber-400 rounded-full flex items-center justify-center">
+                                        <FiCalendar className="text-white" />
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
+                              )}
+
+                              {/* Line Chart - Amount Trend */}
+                              <div className="bg-white border border-gray-200 rounded-lg p-6 ">
+                                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                  <FiTrendingUp className="text-amber-500" />
+                                  Amount Trend Analysis
+                                </h4>
+                                <div className="h-64">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData}>
+                                      <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        stroke="#f0f0f0"
+                                      />
+                                      <XAxis
+                                        dataKey="period"
+                                        stroke="#6b7280"
+                                        fontSize={10}
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={50}
+                                      />
+                                      <YAxis stroke="#6b7280" fontSize={10} />
+                                      <Tooltip
+                                        formatter={(value, name) => [
+                                          name === "totalAmount"
+                                            ? formatCurrency(value)
+                                            : value,
+                                          name === "totalAmount"
+                                            ? "Total Amount"
+                                            : "Count",
+                                        ]}
+                                        labelStyle={{ color: "#374151" }}
+                                        contentStyle={{
+                                          backgroundColor: "#f9fafb",
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: "8px",
+                                          fontSize: "12px",
+                                        }}
+                                      />
+                                      <Legend wrapperStyle={{ fontSize: "12px" }} />
+                                      <Line
+                                        type="monotone"
+                                        dataKey="totalAmount"
+                                        stroke="#f97316"
+                                        strokeWidth={2}
+                                        dot={{
+                                          fill: "#f97316",
+                                          strokeWidth: 1,
+                                          r: 3,
+                                        }}
+                                        activeDot={{ r: 5, fill: "#ea580c" }}
+                                        name="Total Amount"
+                                      />
+                                    </LineChart>
+                                  </ResponsiveContainer>
+                                </div>
                               </div>
-                            )}
 
-                            {/* Line Chart - Amount Trend */}
-                            <div className="bg-white border border-gray-200 rounded-lg p-6 ">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <FiTrendingUp className="text-amber-500" />
-                                Amount Trend Analysis
-                              </h4>
-                              <div className="h-64">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={chartData}>
-                                  <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    stroke="#f0f0f0"
-                                  />
-                                  <XAxis
-                                    dataKey="period"
-                                    stroke="#6b7280"
-                                    fontSize={10}
-                                    angle={-45}
-                                    textAnchor="end"
-                                    height={50}
-                                  />
-                                  <YAxis stroke="#6b7280" fontSize={10} />
-                                  <Tooltip
-                                    formatter={(value, name) => [
-                                      name === "totalAmount"
-                                        ? formatCurrency(value)
-                                        : value,
-                                      name === "totalAmount"
-                                        ? "Total Amount"
-                                        : "Count",
-                                    ]}
-                                    labelStyle={{ color: "#374151" }}
-                                    contentStyle={{
-                                      backgroundColor: "#f9fafb",
-                                      border: "1px solid #e5e7eb",
-                                      borderRadius: "8px",
-                                      fontSize: "12px",
-                                    }}
-                                  />
-                                  <Legend wrapperStyle={{ fontSize: "12px" }} />
-                                  <Line
-                                    type="monotone"
-                                    dataKey="totalAmount"
-                                    stroke="#f97316"
-                                    strokeWidth={2}
-                                    dot={{
-                                      fill: "#f97316",
-                                      strokeWidth: 1,
-                                      r: 3,
-                                    }}
-                                    activeDot={{ r: 5, fill: "#ea580c" }}
-                                    name="Total Amount"
-                                  />
-                                </LineChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </div>
+                              {/* Bar Chart - Entries Count */}
+                              <div className="bg-white border border-gray-200 rounded-lg p-6 ">
+                                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                  <FiBarChart2 className="text-blue-500" />
+                                  Entries Volume Analysis
+                                </h4>
+                                <div className="h-64">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData}>
+                                      <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        stroke="#f0f0f0"
+                                      />
+                                      <XAxis
+                                        dataKey="period"
+                                        stroke="#6b7280"
+                                        fontSize={10}
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={50}
+                                      />
+                                      <YAxis stroke="#6b7280" fontSize={10} />
+                                      <Tooltip
+                                        formatter={(value, name) => [
+                                          value,
+                                          "Entries Count",
+                                        ]}
+                                        labelStyle={{ color: "#374151" }}
+                                        contentStyle={{
+                                          backgroundColor: "#f9fafb",
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: "8px",
+                                          fontSize: "12px",
+                                        }}
+                                      />
+                                      <Legend wrapperStyle={{ fontSize: "12px" }} />
+                                      <Bar
+                                        dataKey="count"
+                                        fill="#3b82f6"
+                                        name="Entries Count"
+                                        radius={[2, 2, 0, 0]}
+                                      />
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              </div>
 
-                            {/* Bar Chart - Entries Count */}
-                            <div className="bg-white border border-gray-200 rounded-lg p-6 ">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <FiBarChart2 className="text-blue-500" />
-                                Entries Volume Analysis
-                              </h4>
-                              <div className="h-64">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData}>
-                                  <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    stroke="#f0f0f0"
-                                  />
-                                  <XAxis
-                                    dataKey="period"
-                                    stroke="#6b7280"
-                                    fontSize={10}
-                                    angle={-45}
-                                    textAnchor="end"
-                                    height={50}
-                                  />
-                                  <YAxis stroke="#6b7280" fontSize={10} />
-                                  <Tooltip
-                                    formatter={(value, name) => [
-                                      value,
-                                      "Entries Count",
-                                    ]}
-                                    labelStyle={{ color: "#374151" }}
-                                    contentStyle={{
-                                      backgroundColor: "#f9fafb",
-                                      border: "1px solid #e5e7eb",
-                                      borderRadius: "8px",
-                                      fontSize: "12px",
-                                    }}
-                                  />
-                                  <Legend wrapperStyle={{ fontSize: "12px" }} />
-                                  <Bar
-                                    dataKey="count"
-                                    fill="#3b82f6"
-                                    name="Entries Count"
-                                    radius={[2, 2, 0, 0]}
-                                  />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </div>
-
-                            {/* Combined Chart - Amount vs Count */}
-                            <div className="bg-white border border-gray-200 rounded-lg p-6 ">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <FiActivity className="text-purple-500" />
-                                Combined Metrics Analysis
-                              </h4>
-                              <div className="h-64">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={chartData}>
-                                  <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    stroke="#f0f0f0"
-                                  />
-                                  <XAxis
-                                    dataKey="period"
-                                    stroke="#6b7280"
-                                    fontSize={10}
-                                    angle={-45}
-                                    textAnchor="end"
-                                    height={50}
-                                  />
-                                  <YAxis
-                                    yAxisId="amount"
-                                    orientation="left"
-                                    stroke="#f97316"
-                                    fontSize={10}
-                                  />
-                                  <YAxis
-                                    yAxisId="count"
-                                    orientation="right"
-                                    stroke="#3b82f6"
-                                    fontSize={10}
-                                  />
-                                  <Tooltip
-                                    formatter={(value, name) => [
-                                      name === "totalAmount"
-                                        ? formatCurrency(value)
-                                        : value,
-                                      name === "totalAmount"
-                                        ? "Total Amount"
-                                        : "Entries Count",
-                                    ]}
-                                    labelStyle={{ color: "#374151" }}
-                                    contentStyle={{
-                                      backgroundColor: "#f9fafb",
-                                      border: "1px solid #e5e7eb",
-                                      borderRadius: "8px",
-                                      fontSize: "12px",
-                                    }}
-                                  />
-                                  <Legend wrapperStyle={{ fontSize: "12px" }} />
-                                  <Line
-                                    yAxisId="amount"
-                                    type="monotone"
-                                    dataKey="totalAmount"
-                                    stroke="#f97316"
-                                    strokeWidth={2}
-                                    dot={{
-                                      fill: "#f97316",
-                                      strokeWidth: 1,
-                                      r: 3,
-                                    }}
-                                    name="Total Amount"
-                                  />
-                                  <Line
-                                    yAxisId="count"
-                                    type="monotone"
-                                    dataKey="count"
-                                    stroke="#3b82f6"
-                                    strokeWidth={2}
-                                    dot={{
-                                      fill: "#3b82f6",
-                                      strokeWidth: 1,
-                                      r: 3,
-                                    }}
-                                    name="Entries Count"
-                                  />
-                                </LineChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
+                              {/* Combined Chart - Amount vs Count */}
+                              <div className="bg-white border border-gray-200 rounded-lg p-6 ">
+                                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                  <FiActivity className="text-purple-500" />
+                                  Combined Metrics Analysis
+                                </h4>
+                                <div className="h-64">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData}>
+                                      <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        stroke="#f0f0f0"
+                                      />
+                                      <XAxis
+                                        dataKey="period"
+                                        stroke="#6b7280"
+                                        fontSize={10}
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={50}
+                                      />
+                                      <YAxis
+                                        yAxisId="amount"
+                                        orientation="left"
+                                        stroke="#f97316"
+                                        fontSize={10}
+                                      />
+                                      <YAxis
+                                        yAxisId="count"
+                                        orientation="right"
+                                        stroke="#3b82f6"
+                                        fontSize={10}
+                                      />
+                                      <Tooltip
+                                        formatter={(value, name) => [
+                                          name === "totalAmount"
+                                            ? formatCurrency(value)
+                                            : value,
+                                          name === "totalAmount"
+                                            ? "Total Amount"
+                                            : "Entries Count",
+                                        ]}
+                                        labelStyle={{ color: "#374151" }}
+                                        contentStyle={{
+                                          backgroundColor: "#f9fafb",
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: "8px",
+                                          fontSize: "12px",
+                                        }}
+                                      />
+                                      <Legend wrapperStyle={{ fontSize: "12px" }} />
+                                      <Line
+                                        yAxisId="amount"
+                                        type="monotone"
+                                        dataKey="totalAmount"
+                                        stroke="#f97316"
+                                        strokeWidth={2}
+                                        dot={{
+                                          fill: "#f97316",
+                                          strokeWidth: 1,
+                                          r: 3,
+                                        }}
+                                        name="Total Amount"
+                                      />
+                                      <Line
+                                        yAxisId="count"
+                                        type="monotone"
+                                        dataKey="count"
+                                        stroke="#3b82f6"
+                                        strokeWidth={2}
+                                        dot={{
+                                          fill: "#3b82f6",
+                                          strokeWidth: 1,
+                                          r: 3,
+                                        }}
+                                        name="Entries Count"
+                                      />
+                                    </LineChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
                     ) : (
                       <div className="bg-gray-50 rounded-lg border border-gray-200 p-8 text-center">
                         <FiBarChart2 className="mx-auto text-gray-400 text-4xl mb-4" />
@@ -2413,233 +2400,233 @@ const AdminAnalysis = () => {
                         </button>
                       </div>
                     )}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    {/* Bank Entries Popup */}
-    {showEntriesPopup && selectedBankForPopup && (
-      <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg  max-w-4xl w-full max-h-[90vh] overflow-hidden">
-          {/* Popup Header */}
-          <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-bold">{selectedBankForPopup.account.bankName}</h3>
-                <p className="text-purple-100 mt-1">
-                  {selectedBankForPopup.account.accountHolder} • {selectedBankForPopup.account.accountNumber}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowEntriesPopup(false);
-                  setSelectedBankForPopup(null);
-                }}
-                className="text-white hover:text-gray-200 transition-colors"
-              >
-                <FiX size={24} />
-              </button>
-            </div>
-          </div>
-
-          {/* Popup Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-purple-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-purple-600 font-medium">Linked Expenses</p>
-                <p className="text-xl font-bold text-purple-800">
-                  {selectedBankForPopup.totalLinkedExpenses || 0}
-                </p>
-                <p className="text-xs text-purple-600">
-                  {formatCurrency(selectedBankForPopup.totalLinkedExpenseAmount || 0)}
-                </p>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-blue-600 font-medium">Transactions</p>
-                <p className="text-xl font-bold text-blue-800">
-                  {selectedBankForPopup.paymentCount || 0}
-                </p>
-                <p className="text-xs text-blue-600">
-                  {formatCurrency(selectedBankForPopup.totalAmount || 0)}
-                </p>
-              </div>
-              <div className="bg-emerald-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-emerald-600 font-medium">Total Entries</p>
-                <p className="text-xl font-bold text-emerald-800">
-                  {(selectedBankForPopup.totalLinkedExpenses || 0) + (selectedBankForPopup.paymentCount || 0)}
-                </p>
-                <p className="text-xs text-emerald-600">All activity</p>
-              </div>
-              <div className="bg-amber-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-amber-600 font-medium">Avg Expense</p>
-                <p className="text-xl font-bold text-amber-800">
-                  {formatCurrency(selectedBankForPopup.averageLinkedExpenseAmount || 0)}
-                </p>
-                <p className="text-xs text-amber-600">Per expense</p>
+      {/* Bank Entries Popup */}
+      {showEntriesPopup && selectedBankForPopup && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg  max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Popup Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold">{selectedBankForPopup.account.bankName}</h3>
+                  <p className="text-purple-100 mt-1">
+                    {selectedBankForPopup.account.accountHolder} • {selectedBankForPopup.account.accountNumber}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEntriesPopup(false);
+                    setSelectedBankForPopup(null);
+                  }}
+                  className="text-white hover:text-gray-200 transition-colors"
+                >
+                  <FiX size={24} />
+                </button>
               </div>
             </div>
 
-            {/* Expense Breakdown */}
-            {selectedBankForPopup.linkedExpenseBreakdown && (
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <FiPieChart className="text-purple-500" />
-                  Expense Breakdown
+            {/* Popup Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <p className="text-sm text-purple-600 font-medium">Linked Expenses</p>
+                  <p className="text-xl font-bold text-purple-800">
+                    {selectedBankForPopup.totalLinkedExpenses || 0}
+                  </p>
+                  <p className="text-xs text-purple-600">
+                    {formatCurrency(selectedBankForPopup.totalLinkedExpenseAmount || 0)}
+                  </p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <p className="text-sm text-blue-600 font-medium">Transactions</p>
+                  <p className="text-xl font-bold text-blue-800">
+                    {selectedBankForPopup.paymentCount || 0}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    {formatCurrency(selectedBankForPopup.totalAmount || 0)}
+                  </p>
+                </div>
+                <div className="bg-emerald-50 rounded-lg p-4 text-center">
+                  <p className="text-sm text-emerald-600 font-medium">Total Entries</p>
+                  <p className="text-xl font-bold text-emerald-800">
+                    {(selectedBankForPopup.totalLinkedExpenses || 0) + (selectedBankForPopup.paymentCount || 0)}
+                  </p>
+                  <p className="text-xs text-emerald-600">All activity</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-4 text-center">
+                  <p className="text-sm text-amber-600 font-medium">Avg Expense</p>
+                  <p className="text-xl font-bold text-amber-800">
+                    {formatCurrency(selectedBankForPopup.averageLinkedExpenseAmount || 0)}
+                  </p>
+                  <p className="text-xs text-amber-600">Per expense</p>
+                </div>
+              </div>
+
+              {/* Expense Breakdown */}
+              {selectedBankForPopup.linkedExpenseBreakdown && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <FiPieChart className="text-purple-500" />
+                    Expense Breakdown
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-purple-600">Ad Expenses</span>
+                        <span className="text-lg font-bold text-purple-800">
+                          {selectedBankForPopup.linkedExpenseBreakdown.linkedAdExpenses || 0}
+                        </span>
+                      </div>
+                      <p className="text-xl font-bold text-purple-900">
+                        {formatCurrency(selectedBankForPopup.linkedExpenseBreakdown.linkedAdExpenseAmount || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-cyan-600">Regular Expenses</span>
+                        <span className="text-lg font-bold text-cyan-800">
+                          {selectedBankForPopup.linkedExpenseBreakdown.linkedRegularExpenses || 0}
+                        </span>
+                      </div>
+                      <p className="text-xl font-bold text-cyan-900">
+                        {formatCurrency(selectedBankForPopup.linkedExpenseBreakdown.linkedRegularExpenseAmount || 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Monthly Analysis */}
+              {selectedBankForPopup.monthlyExpenseAnalysis && selectedBankForPopup.monthlyExpenseAnalysis.length > 0 && (
+                <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                    <FiCalendar className="text-blue-600" />
+                    Monthly Expense Analysis
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedBankForPopup.monthlyExpenseAnalysis.slice(0, 6).map((month, index) => (
+                      <div key={month.month} className="bg-white rounded-lg p-3 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {new Date(month.month + '-01').toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long'
+                            })}
+                          </p>
+                          <p className="text-sm text-gray-600">{month.expenseCount} expenses</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-blue-800">
+                            {formatCurrency(month.totalAmount)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Ad: {formatCurrency(month.adExpenseAmount || 0)} |
+                            Regular: {formatCurrency(month.regularExpenseAmount || 0)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Date Ranges */}
+              <div className="bg-green-50 rounded-lg p-4 mb-6">
+                <h4 className="text-lg font-semibold text-green-800 mb-3 flex items-center gap-2">
+                  <FiCalendar className="text-green-600" />
+                  Activity Timeline
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-purple-600">Ad Expenses</span>
-                      <span className="text-lg font-bold text-purple-800">
-                        {selectedBankForPopup.linkedExpenseBreakdown.linkedAdExpenses || 0}
-                      </span>
+                  {selectedBankForPopup.expenseDateRange?.earliest && (
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-sm font-medium text-green-600 mb-1">Expense Activity</p>
+                      <p className="text-sm text-gray-800">
+                        <strong>From:</strong> {formatDate(selectedBankForPopup.expenseDateRange.earliest)}
+                      </p>
+                      <p className="text-sm text-gray-800">
+                        <strong>To:</strong> {formatDate(selectedBankForPopup.expenseDateRange.latest)}
+                      </p>
                     </div>
-                    <p className="text-xl font-bold text-purple-900">
-                      {formatCurrency(selectedBankForPopup.linkedExpenseBreakdown.linkedAdExpenseAmount || 0)}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-cyan-600">Regular Expenses</span>
-                      <span className="text-lg font-bold text-cyan-800">
-                        {selectedBankForPopup.linkedExpenseBreakdown.linkedRegularExpenses || 0}
-                      </span>
+                  )}
+                  {selectedBankForPopup.transactionDateRange?.earliest && (
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-sm font-medium text-blue-600 mb-1">Transaction Activity</p>
+                      <p className="text-sm text-gray-800">
+                        <strong>From:</strong> {formatDate(selectedBankForPopup.transactionDateRange.earliest)}
+                      </p>
+                      <p className="text-sm text-gray-800">
+                        <strong>To:</strong> {formatDate(selectedBankForPopup.transactionDateRange.latest)}
+                      </p>
                     </div>
-                    <p className="text-xl font-bold text-cyan-900">
-                      {formatCurrency(selectedBankForPopup.linkedExpenseBreakdown.linkedRegularExpenseAmount || 0)}
-                    </p>
-                  </div>
+                  )}
                 </div>
               </div>
-            )}
 
-            {/* Monthly Analysis */}
-            {selectedBankForPopup.monthlyExpenseAnalysis && selectedBankForPopup.monthlyExpenseAnalysis.length > 0 && (
-              <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                  <FiCalendar className="text-blue-600" />
-                  Monthly Expense Analysis
-                </h4>
-                <div className="space-y-3">
-                  {selectedBankForPopup.monthlyExpenseAnalysis.slice(0, 6).map((month, index) => (
-                    <div key={month.month} className="bg-white rounded-lg p-3 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {new Date(month.month + '-01').toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long' 
-                          })}
-                        </p>
-                        <p className="text-sm text-gray-600">{month.expenseCount} expenses</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-blue-800">
-                          {formatCurrency(month.totalAmount)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Ad: {formatCurrency(month.adExpenseAmount || 0)} | 
-                          Regular: {formatCurrency(month.regularExpenseAmount || 0)}
-                        </p>
-                      </div>
+              {/* Performance Metrics */}
+              {selectedBankForPopup.performanceMetrics && (
+                <div className="bg-amber-50 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                    <FiActivity className="text-amber-600" />
+                    Performance Metrics
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-600 mb-1">Transaction Velocity</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {selectedBankForPopup.performanceMetrics.transactionVelocity || 0}
+                      </p>
+                      <p className="text-xs text-gray-500">per day</p>
                     </div>
-                  ))}
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-600 mb-1">Expense Velocity</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {selectedBankForPopup.performanceMetrics.linkedExpenseVelocity || 0}
+                      </p>
+                      <p className="text-xs text-gray-500">per day</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-600 mb-1">Account Utilization</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {(selectedBankForPopup.performanceMetrics.accountUtilization || 0).toFixed(1)}%
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-600 mb-1">Expense Ratio</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {(selectedBankForPopup.performanceMetrics.linkedExpenseRatio || 0).toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* Date Ranges */}
-            <div className="bg-green-50 rounded-lg p-4 mb-6">
-              <h4 className="text-lg font-semibold text-green-800 mb-3 flex items-center gap-2">
-                <FiCalendar className="text-green-600" />
-                Activity Timeline
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {selectedBankForPopup.expenseDateRange?.earliest && (
-                  <div className="bg-white rounded-lg p-3">
-                    <p className="text-sm font-medium text-green-600 mb-1">Expense Activity</p>
-                    <p className="text-sm text-gray-800">
-                      <strong>From:</strong> {formatDate(selectedBankForPopup.expenseDateRange.earliest)}
-                    </p>
-                    <p className="text-sm text-gray-800">
-                      <strong>To:</strong> {formatDate(selectedBankForPopup.expenseDateRange.latest)}
-                    </p>
-                  </div>
-                )}
-                {selectedBankForPopup.transactionDateRange?.earliest && (
-                  <div className="bg-white rounded-lg p-3">
-                    <p className="text-sm font-medium text-blue-600 mb-1">Transaction Activity</p>
-                    <p className="text-sm text-gray-800">
-                      <strong>From:</strong> {formatDate(selectedBankForPopup.transactionDateRange.earliest)}
-                    </p>
-                    <p className="text-sm text-gray-800">
-                      <strong>To:</strong> {formatDate(selectedBankForPopup.transactionDateRange.latest)}
-                    </p>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
-            {/* Performance Metrics */}
-            {selectedBankForPopup.performanceMetrics && (
-              <div className="bg-amber-50 rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-amber-800 mb-3 flex items-center gap-2">
-                  <FiActivity className="text-amber-600" />
-                  Performance Metrics
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-600 mb-1">Transaction Velocity</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {selectedBankForPopup.performanceMetrics.transactionVelocity || 0}
-                    </p>
-                    <p className="text-xs text-gray-500">per day</p>
-                  </div>
-                  <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-600 mb-1">Expense Velocity</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {selectedBankForPopup.performanceMetrics.linkedExpenseVelocity || 0}
-                    </p>
-                    <p className="text-xs text-gray-500">per day</p>
-                  </div>
-                  <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-600 mb-1">Account Utilization</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {(selectedBankForPopup.performanceMetrics.accountUtilization || 0).toFixed(1)}%
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-600 mb-1">Expense Ratio</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {(selectedBankForPopup.performanceMetrics.linkedExpenseRatio || 0).toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
+            {/* Popup Footer */}
+            <div className="bg-gray-50 p-4 border-t">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowEntriesPopup(false);
+                    setSelectedBankForPopup(null);
+                  }}
+                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Close
+                </button>
               </div>
-            )}
-          </div>
-
-          {/* Popup Footer */}
-          <div className="bg-gray-50 p-4 border-t">
-            <div className="flex justify-end">
-              <button
-                onClick={() => {
-                  setShowEntriesPopup(false);
-                  setSelectedBankForPopup(null);
-                }}
-                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </div>
   );
 };

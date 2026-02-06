@@ -23,9 +23,13 @@ const makeAuthenticatedRequest = async (url, options = {}) => {
     headers,
   });
 
+
   // Check if response is JSON
   const contentType = response.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
+    // Try to get the response text for debugging
+    const responseText = await response.text();
+
     throw new Error(
       `Server returned non-JSON response. Status: ${response.status}`,
     );
@@ -34,6 +38,8 @@ const makeAuthenticatedRequest = async (url, options = {}) => {
   const data = await response.json();
 
   if (!response.ok) {
+
+
     // Handle 401 errors by redirecting to login
     if (response.status === 401) {
       localStorage.removeItem("authToken");
@@ -303,7 +309,7 @@ export const adExpenseAPI = {
     try {
       const url = `${API_URL}/api/adexpenses/${id}`;
       const data = await makeAuthenticatedRequest(url);
-console.log("🟢 BY ID API FULL RESPONSE:", JSON.parse(JSON.stringify(data)));
+      console.log("🟢 BY ID API FULL RESPONSE:", JSON.parse(JSON.stringify(data)));
       // Check for ID mismatch
       if (data?.id !== id) {
         console.warn(`⚠️ ID MISMATCH: Requested ${id}, got ${data?.id}`);
@@ -413,7 +419,10 @@ console.log("🟢 BY ID API FULL RESPONSE:", JSON.parse(JSON.stringify(data)));
       const queryParams = new URLSearchParams();
 
       if (params.userId) queryParams.append("userId", params.userId);
-      if (params.unit) queryParams.append("unit", params.unit); // 'month', 'week', 'quarter', 'year'
+      let unit = params.unit;
+      if (unit === "quarter") unit = "month";
+      if (unit) queryParams.append("unit", unit);
+      // 'month', 'week', 'quarter', 'year'
 
       const queryString = queryParams.toString();
       const url = `${API_URL}/api/adexpenses/analysis-user-time${queryString ? `?${queryString}` : ""}`;
@@ -435,35 +444,30 @@ console.log("🟢 BY ID API FULL RESPONSE:", JSON.parse(JSON.stringify(data)));
       const queryParams = new URLSearchParams();
 
       // Time unit for grouping
-      if (params.unit) queryParams.append("unit", params.unit); // 'day', 'week', 'month', 'quarter', 'year'
-
-      // Date filtering parameters based on backend API structure
-      if (params.selectedDate) {
-        queryParams.append("selectedDate", params.selectedDate); // YYYY-MM-DD format
+      let unit = params.unit;
+      if (unit === "quarter") {
+        unit = "month"; // 🔥 Backend converts quarter to month grouping
       }
+      if (unit) queryParams.append("unit", unit);
 
-      if (
-        params.selectedMonth !== undefined &&
-        params.selectedYear !== undefined
-      ) {
-        queryParams.append("selectedMonth", params.selectedMonth); // Number 1-12
-        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
-      }
+      // 🔒 Backend rule: ONLY ONE date strategy allowed at a time
+      if (params.startDate && params.endDate) {
+        queryParams.append("startDate", params.startDate);
+        queryParams.append("endDate", params.endDate);
 
-      if (
-        params.selectedQuarter !== undefined &&
-        params.selectedYear !== undefined
-      ) {
-        queryParams.append("selectedQuarter", params.selectedQuarter); // Number 1-4
-        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
-      }
+      } else if (params.selectedDate) {
+        queryParams.append("selectedDate", params.selectedDate);
 
-      if (
-        params.selectedYear !== undefined &&
-        params.selectedMonth === undefined &&
-        params.selectedQuarter === undefined
-      ) {
-        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
+      } else if (params.selectedMonth !== undefined && params.selectedYear !== undefined) {
+        queryParams.append("selectedMonth", params.selectedMonth);
+        queryParams.append("selectedYear", params.selectedYear);
+
+      } else if (params.selectedQuarter !== undefined && params.selectedYear !== undefined) {
+        queryParams.append("selectedQuarter", params.selectedQuarter);
+        queryParams.append("selectedYear", params.selectedYear);
+
+      } else if (params.selectedYear !== undefined) {
+        queryParams.append("selectedYear", params.selectedYear);
       }
 
       const queryString = queryParams.toString();
@@ -508,42 +512,45 @@ console.log("🟢 BY ID API FULL RESPONSE:", JSON.parse(JSON.stringify(data)));
         throw new Error("No authentication token found. Please login again.");
       }
 
+      console.log("📥 [API] getHeadDashboard received params:", params);
+
+      // 🔒 Enforce backend rule: ONLY ONE date strategy allowed
+      if (params.startDate && params.endDate) {
+        delete params.selectedDate;
+        delete params.selectedMonth;
+        delete params.selectedQuarter;
+        delete params.selectedYear;
+      }
+
       const queryParams = new URLSearchParams();
 
-      // Date filtering parameters based on backend API structure
-      if (params.selectedDate) {
-        queryParams.append("selectedDate", params.selectedDate); // YYYY-MM-DD format
-      }
+      // 🔒 Backend rule: ONLY ONE date strategy allowed at a time
+      // Priority: startDate/endDate > selectedDate > selectedMonth > selectedQuarter > selectedYear
 
-      if (
-        params.selectedMonth !== undefined &&
-        params.selectedYear !== undefined
-      ) {
-        queryParams.append("selectedMonth", params.selectedMonth); // Number 1-12
-        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
-      }
-
-      if (
-        params.selectedQuarter !== undefined &&
-        params.selectedYear !== undefined
-      ) {
-        queryParams.append("selectedQuarter", params.selectedQuarter); // Number 1-4
-        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
-      }
-
-      if (
-        params.selectedYear !== undefined &&
-        params.selectedMonth === undefined &&
-        params.selectedQuarter === undefined
-      ) {
-        queryParams.append("selectedYear", params.selectedYear); // Number YYYY
-      }
-
-      // Explicit date range (takes precedence when provided)
       if (params.startDate && params.endDate) {
-        queryParams.append("startDate", params.startDate); // YYYY-MM-DD
-        queryParams.append("endDate", params.endDate); // YYYY-MM-DD
+        // Explicit date range takes highest priority
+        queryParams.append("startDate", params.startDate);
+        queryParams.append("endDate", params.endDate);
+
+      } else if (params.selectedDate) {
+        // Single date selection
+        queryParams.append("selectedDate", params.selectedDate);
+
+      } else if (params.selectedMonth !== undefined && params.selectedYear !== undefined) {
+        // Month selection (requires both month and year)
+        queryParams.append("selectedMonth", params.selectedMonth);
+        queryParams.append("selectedYear", params.selectedYear);
+
+      } else if (params.selectedQuarter !== undefined && params.selectedYear !== undefined) {
+        // Quarter selection (requires both quarter and year)
+        queryParams.append("selectedQuarter", params.selectedQuarter);
+        queryParams.append("selectedYear", params.selectedYear);
+
+      } else if (params.selectedYear !== undefined) {
+        // Year-only selection (fallback)
+        queryParams.append("selectedYear", params.selectedYear);
       }
+      // If none of the above, backend will use its default fallback (last 6 months)
 
       // Pagination parameters
       if (params.limit) queryParams.append("limit", params.limit);
@@ -551,6 +558,9 @@ console.log("🟢 BY ID API FULL RESPONSE:", JSON.parse(JSON.stringify(data)));
 
       const queryString = queryParams.toString();
       const url = `${API_URL}/api/adexpenses/head-dashboard${queryString ? `?${queryString}` : ""}`;
+
+      console.log("🌐 [API] Full request URL:", url);
+      console.log("📊 [API] Query params object:", Object.fromEntries(queryParams));
 
       const data = await makeAuthenticatedRequest(url, {
         headers: {
@@ -646,8 +656,12 @@ export const locationAPI = {
   // Get centres with full details (regions, branches included)
   getCentresWithDetails: async () => {
     try {
-      const url = `${API_URL}/api/centres/full`;
-      const data = await makeAuthenticatedRequest(url);
+      const url = `${API_URL}/api/centres/with-details/all`;
+      const response = await makeAuthenticatedRequest(url);
+
+      // Backend returns { success: true, data: [...] }
+      const data = response?.data || response;
+
       return data;
     } catch (error) {
       throw error;
@@ -901,9 +915,34 @@ export const bankAccountAPI = {
         queryParams.append("userId", filters.userId);
       }
 
-      const url = `${API_URL}/api/bank-accounts/analysis${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
+      const url = `${API_URL}/api/bank-accounts/analytics${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
       const result = await makeAuthenticatedRequest(url);
-      return result.data;
+
+      // Handle both response formats:
+      // 1. Direct array: [{ accountId, bankName, ... }]
+      // 2. Object with data: { data: [...] }
+      // 3. Object with summary: { summary: {...}, bankAccounts: [...] }
+
+      let responseData = result.data || result;
+
+      // If response is a direct array, wrap it in the expected format
+      if (Array.isArray(responseData)) {
+        return {
+          bankAccounts: responseData,
+          summary: null // Will be calculated in the component
+        };
+      }
+
+      // If response has bankAccounts property, return as-is
+      if (responseData.bankAccounts) {
+        return responseData;
+      }
+
+      // Otherwise assume the response itself is the data
+      return {
+        bankAccounts: Array.isArray(responseData) ? responseData : [],
+        summary: responseData.summary || null
+      };
     } catch (error) {
       throw error;
     }
@@ -921,7 +960,7 @@ export const bankAccountAPI = {
         queryParams.append("endDate", filters.endDate);
       }
 
-      const url = `${API_URL}/api/bank-accounts/analysis/${id}${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
+      const url = `${API_URL}/api/bank-accounts/${id}/analytics${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
       const result = await makeAuthenticatedRequest(url);
       return result.data;
     } catch (error) {
