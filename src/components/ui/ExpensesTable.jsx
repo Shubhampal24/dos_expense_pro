@@ -66,78 +66,78 @@ const ExpensesTable = ({
   // console.log("📦 Expenses from backend:", expenses);
 
   // 🔒 Show only non-deleted expenses
-const activeExpenses = expenses.filter(
-  (expense) => expense.isDeleted !== true
-);
+  const activeExpenses = expenses.filter(
+    (expense) => expense.isDeleted !== true
+  );
 
-const activeFilteredExpenses = filteredExpenses.filter(
-  (expense) => expense.isDeleted !== true
-);
+  const activeFilteredExpenses = filteredExpenses.filter(
+    (expense) => expense.isDeleted !== true
+  );
 
   // Helper function to open location modal
   const openLocationModal = async (expense) => {
-  try {
-    const response = await adExpenseAPI.getAdExpenseById(expense.id);
+    try {
+      const response = await adExpenseAPI.getAdExpenseById(expense.id);
 
-    // ✅ VALIDATION: Ensure response matches requested ID
-    if (response?.id && response.id !== expense.id) {
-      console.error(`❌ CRITICAL: Backend returned wrong expense. Expected: ${expense.id}, Got: ${response.id}`);
-      // Still use the original expense data, ignore API response with wrong ID
+      // ✅ VALIDATION: Ensure response matches requested ID
+      if (response?.id && response.id !== expense.id) {
+        console.error(`❌ CRITICAL: Backend returned wrong expense. Expected: ${expense.id}, Got: ${response.id}`);
+        // Still use the original expense data, ignore API response with wrong ID
+      }
+
+      // ✅ ALWAYS use the clicked expense data, never use API response data for main fields
+      const expenseToSet = {
+        id: expense.id,                    // 👈 ALWAYS use clicked expense ID
+        expenseDate: expense.expenseDate,
+        paidTo: expense.paidTo,
+        amount: expense.amount,
+        reason: expense.reason,
+        verified: expense.verified,
+        bankAccount: expense.bankAccount,
+        GST: expense.GST,
+        TdsAmount: expense.TdsAmount,
+        region_ids: expense.region_ids,
+        branch_ids: expense.branch_ids,
+        centre_ids: expense.centre_ids,
+        createdBy: expense.createdBy,
+        createdAt: expense.createdAt,
+        updatedAt: expense.updatedAt,
+        // Only use locations array from API response
+        locations: response?.locations || [],
+      };
+
+      setModalLocationData({
+        expense: expenseToSet,
+
+        regions: (response?.locations || [])
+          .filter(l => l.regionId)
+          .map(l => ({
+            id: l.regionId,
+            name: l.regionName,
+          })),
+
+        branches: (response?.locations || [])
+          .filter(l => l.branchId)
+          .map(l => ({
+            id: l.branchId,
+            name: l.branchName,
+          })),
+
+        centres: (response?.locations || [])
+          .filter(l => l.centreId)
+          .map(l => ({
+            id: l.centreId,
+            name: l.centreName,
+            centreId: l.centreId,
+          })),
+      });
+
+      setModalSearchTerm("");
+      setShowLocationModal(true);
+    } catch (err) {
+      console.error("❌ Failed to load location details:", err);
     }
-
-    // ✅ ALWAYS use the clicked expense data, never use API response data for main fields
-    const expenseToSet = {
-      id: expense.id,                    // 👈 ALWAYS use clicked expense ID
-      expenseDate: expense.expenseDate,
-      paidTo: expense.paidTo,
-      amount: expense.amount,
-      reason: expense.reason,
-      verified: expense.verified,
-      bankAccount: expense.bankAccount,
-      GST: expense.GST,
-      TdsAmount: expense.TdsAmount,
-      region_ids: expense.region_ids,
-      branch_ids: expense.branch_ids,
-      centre_ids: expense.centre_ids,
-      createdBy: expense.createdBy,
-      createdAt: expense.createdAt,
-      updatedAt: expense.updatedAt,
-      // Only use locations array from API response
-      locations: response?.locations || [],
-    };
-
-    setModalLocationData({
-      expense: expenseToSet,
-
-      regions: (response?.locations || [])
-        .filter(l => l.regionId)
-        .map(l => ({
-          id: l.regionId,
-          name: l.regionName,
-        })),
-
-      branches: (response?.locations || [])
-        .filter(l => l.branchId)
-        .map(l => ({
-          id: l.branchId,
-          name: l.branchName,
-        })),
-
-      centres: (response?.locations || [])
-        .filter(l => l.centreId)
-        .map(l => ({
-          id: l.centreId,
-          name: l.centreName,
-          centreId: l.centreId,
-        })),
-    });
-
-    setModalSearchTerm("");
-    setShowLocationModal(true);
-  } catch (err) {
-    console.error("❌ Failed to load location details:", err);
-  }
-};
+  };
 
 
   // Clear all filters
@@ -168,7 +168,7 @@ const activeFilteredExpenses = filteredExpenses.filter(
                   <span className="text-green-600 text-sm font-medium">Total: </span>
                   <span className="text-green-800 text-sm font-bold">
                     ₹{activeFilteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
-  .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
 
                   </span>
                 </div>
@@ -324,38 +324,64 @@ const activeFilteredExpenses = filteredExpenses.filter(
             </div>
           ) : (
             <div className="bg-white rounded-lg border overflow-hidden">
-              <div className="max-h-[480px] overflow-y-auto overflow-x-auto">
-                <table className="w-full">
+              <div
+                className="max-h-[480px] overflow-y-auto overflow-x-auto"
+                style={{
+                  scrollbarWidth: 'none', /* Firefox */
+                  msOverflowStyle: 'none', /* IE and Edge */
+                }}
+              >
+                <style jsx>{`
+                  div::-webkit-scrollbar {
+                    display: none; /* Chrome, Safari, Opera */
+                  }
+                  .location-scroll::-webkit-scrollbar {
+                    display: block;
+                    width: 6px;
+                  }
+                  .location-scroll::-webkit-scrollbar-track {
+                    background: #F7FAFC;
+                    border-radius: 3px;
+                  }
+                  .location-scroll::-webkit-scrollbar-thumb {
+                    background: #CBD5E0;
+                    border-radius: 3px;
+                  }
+                  .location-scroll::-webkit-scrollbar-thumb:hover {
+                    background: #A0AEC0;
+                  }
+                `}</style>
+                <table className="w-full table-fixed">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[100px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Date
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[120px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Paid To
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[180px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Amount
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[150px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Bank Account
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[200px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Locations
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[180px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Reason
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[80px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         No Of Day's
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[120px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Created By
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[100px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Created
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="w-[100px] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -363,7 +389,7 @@ const activeFilteredExpenses = filteredExpenses.filter(
                   <tbody className="bg-white divide-y divide-gray-200">
                     {activeFilteredExpenses.map((expense, index) => (
 
-                      
+
                       <tr
                         key={expense.id}
                         className={
@@ -449,19 +475,17 @@ const activeFilteredExpenses = filteredExpenses.filter(
                           )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {expense.bankAccount ? (
+                          {expense.bankAccountHolderName || expense.bankAccount ? (
                             <div className="flex flex-col space-y-1">
                               <span className="text-xs font-medium text-blue-700">
-                                {expense.bankAccount.accountHolder || "N/A"}
+                                {expense.bankAccountHolderName || expense.bankAccount?.accountHolder || "N/A"}
                               </span>
                               <span className="text-xs text-gray-600">
-                                {expense.bankAccount.bankName || "N/A"}
+                                {expense.bankName || expense.bankAccount?.bankName || "N/A"}
                               </span>
                               <span className="text-xs text-gray-500 font-mono">
                                 ****
-                                {expense.bankAccount.accountNumber?.slice(
-                                  -4
-                                ) || "****"}
+                                {(expense.bankAccount?.accountNumber?.slice(-4)) || "****"}
                               </span>
                             </div>
                           ) : (
@@ -471,93 +495,99 @@ const activeFilteredExpenses = filteredExpenses.filter(
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          <div className="max-h-24 overflow-y-auto space-y-1">
+                          <div
+                            className="max-h-24 overflow-y-auto space-y-1 location-scroll"
+                            style={{
+                              scrollbarWidth: 'thin',
+                              scrollbarColor: '#CBD5E0 #F7FAFC'
+                            }}
+                          >
                             {/* Regions */}
                             {expense.region_names?.length > 0 && (
-  <div>
-    <div className="flex items-center justify-between mb-1">
-      <div className="text-xs font-medium text-gray-600">
-        Regions ({expense.region_names.length}):
-      </div>
-      <button
-        onClick={() => openLocationModal(expense)}
-        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
-      >
-        <MapPinIcon className="w-3 h-3" />
-        <span>View All</span>
-      </button>
-    </div>
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="text-xs font-medium text-gray-600">
+                                    Regions ({expense.region_names.length}):
+                                  </div>
+                                  <button
+                                    onClick={() => openLocationModal(expense)}
+                                    className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+                                  >
+                                    <MapPinIcon className="w-3 h-3" />
+                                    <span>View All</span>
+                                  </button>
+                                </div>
 
-    <div className="flex flex-wrap gap-1 mb-2">
-      {expense.region_names.slice(0, 3).map((id) => (
-        <span
-          key={id}
-          className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
-        >
-          {id.slice(0, 6)}…
-        </span>
-      ))}
-    </div>
-  </div>
-)}
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {expense.region_names.slice(0, 3).map((id) => (
+                                    <span
+                                      key={id}
+                                      className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
+                                    >
+                                      {id.slice(0, 6)}…
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Branches */}
                             {expense.branch_names?.length > 0 && (
-  <div>
-    <div className="flex items-center justify-between mb-1">
-      <div className="text-xs font-medium text-gray-600">
-        Areas ({expense.branch_names.length}):
-      </div>
-      <button
-        onClick={() => openLocationModal(expense)}
-        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
-      >
-        <MapPinIcon className="w-3 h-3" />
-        <span>View All</span>
-      </button>
-    </div>
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="text-xs font-medium text-gray-600">
+                                    Areas ({expense.branch_names.length}):
+                                  </div>
+                                  <button
+                                    onClick={() => openLocationModal(expense)}
+                                    className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+                                  >
+                                    <MapPinIcon className="w-3 h-3" />
+                                    <span>View All</span>
+                                  </button>
+                                </div>
 
-    <div className="flex flex-wrap gap-1 mb-2">
-      {expense.branch_names.slice(0, 3).map((id) => (
-        <span
-          key={id}
-          className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded"
-        >
-          {id.slice(0, 6)}…
-        </span>
-      ))}
-    </div>
-  </div>
-)}
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {expense.branch_names.slice(0, 3).map((id) => (
+                                    <span
+                                      key={id}
+                                      className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded"
+                                    >
+                                      {id.slice(0, 6)}…
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Centres */}
                             {expense.centre_ids?.length > 0 && (
-  <div>
-    <div className="flex items-center justify-between mb-1">
-      <div className="text-xs font-medium text-gray-600">
-        Centres ({expense.centre_ids.length}):
-      </div>
-      <button
-        onClick={() => openLocationModal(expense)}
-        className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
-      >
-        <MapPinIcon className="w-3 h-3" />
-        <span>View All</span>
-      </button>
-    </div>
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="text-xs font-medium text-gray-600">
+                                    Centres ({expense.centre_ids.length}):
+                                  </div>
+                                  <button
+                                    onClick={() => openLocationModal(expense)}
+                                    className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200"
+                                  >
+                                    <MapPinIcon className="w-3 h-3" />
+                                    <span>View All</span>
+                                  </button>
+                                </div>
 
-    <div className="flex flex-wrap gap-1">
-      {expense.centre_ids.slice(0, 3).map((id) => (
-        <span
-          key={id}
-          className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded"
-        >
-          {id.slice(0, 6)}…
-        </span>
-      ))}
-    </div>
-  </div>
-)}
+                                <div className="flex flex-wrap gap-1">
+                                  {expense.centre_ids.slice(0, 3).map((id) => (
+                                    <span
+                                      key={id}
+                                      className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded"
+                                    >
+                                      {id.slice(0, 6)}…
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                           </div>
                         </td>
