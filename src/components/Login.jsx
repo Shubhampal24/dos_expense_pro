@@ -35,10 +35,10 @@ const Login = () => {
             return;
         }
 
-        const loginData = { 
-  loginId: formData.loginId.trim(),
-  pin: formData.pin.trim()
-};
+        const loginData = {
+            loginId: formData.loginId.trim(),
+            pin: formData.pin.trim()
+        };
 
         setIsLoading(true);
 
@@ -51,7 +51,107 @@ const Login = () => {
                 authAPI.logout();
                 return;
             }
-            navigate('/expenses');
+
+            // Auto-populate locationSelection with user's assigned centres
+            // Option 2: Call getUserCentreHierarchy API to get complete data
+            if (response.user) {
+                try {
+                    const userId = response.user.id || response.user.userId;
+
+                    // Call the getUserCentreHierarchy API endpoint
+                    const hierarchyUrl = `${import.meta.env.VITE_API_BASE_URL || 'https://backend.st9.in'}/api/auth/${userId}/centre-hierarchy`;
+                    const hierarchyResponse = await fetch(hierarchyUrl, {
+                        headers: {
+                            'Authorization': `Bearer ${response.token || localStorage.getItem('authToken')}`
+                        }
+                    });
+
+                    if (hierarchyResponse.ok) {
+                        const hierarchyData = await hierarchyResponse.json();
+
+                        // 🔍 DEBUG LOG - See exact API response
+                        console.log('🔍 getUserCentreHierarchy API Response:', {
+                            fullResponse: hierarchyData,
+                            centresArray: hierarchyData.centres,
+                            firstCentre: hierarchyData.centres?.[0]
+                        });
+
+                        const centres = hierarchyData.centres || [];
+
+                        // Extract unique IDs from hierarchy
+                        const regionIds = [...new Set(
+                            centres
+                                .map(c => c.region?.id)
+                                .filter(Boolean)
+                        )];
+
+                        const branchIds = [...new Set(
+                            centres
+                                .map(c => c.branch?.id)
+                                .filter(Boolean)
+                        )];
+
+                        const centreIds = centres
+                            .map(c => c.id)
+                            .filter(Boolean);
+
+                        // Store in locationSelection
+                        localStorage.setItem('locationSelection', JSON.stringify({
+                            regionIds,
+                            branchIds,
+                            centreIds
+                        }));
+
+                        console.log('✅ Stored in locationSelection:', {
+                            regionIds: regionIds.length,
+                            branchIds: branchIds.length,
+                            centreIds: centreIds.length
+                        });
+
+                        // CRITICAL: Also update user object with location IDs
+                        // This prevents AddExpense from clearing the data
+                        const storedUser = localStorage.getItem('user');
+                        if (storedUser) {
+                            try {
+                                const userObj = JSON.parse(storedUser);
+                                userObj.regionIds = regionIds;
+                                userObj.branchIds = branchIds;
+                                userObj.centreIds = centreIds;
+                                localStorage.setItem('user', JSON.stringify(userObj));
+                                console.log('✅ Updated user object with location IDs');
+                            } catch (e) {
+                                console.error('Failed to update user object:', e);
+                            }
+                        }
+                    } else {
+                        console.warn('⚠️ getUserCentreHierarchy API failed:', hierarchyResponse.status);
+                    }
+                } catch (apiError) {
+                    console.error('❌ Error calling getUserCentreHierarchy:', apiError);
+                }
+            }
+
+            // 🔍 VERIFY: Check if locationSelection is still set before navigation
+            const verifySelection = localStorage.getItem('locationSelection');
+            console.log('🔍 BEFORE NAVIGATION - locationSelection:', verifySelection);
+
+            // Parse the stored data to pass through navigation state
+            let locationData = { regionIds: [], branchIds: [], centreIds: [] };
+            try {
+                if (verifySelection) {
+                    locationData = JSON.parse(verifySelection);
+                }
+            } catch (e) {
+                console.error('Failed to parse locationSelection:', e);
+            }
+
+            // Navigate with location data in state
+            navigate('/expenses', {
+                state: {
+                    locationSelection: locationData,
+                    fromLogin: true
+                }
+            });
         } catch (err) {
             setError(err.message || 'Login failed. Please check your credentials and try again.');
         } finally {

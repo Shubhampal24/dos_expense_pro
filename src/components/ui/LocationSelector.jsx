@@ -17,58 +17,70 @@ const LocationSelector = ({
 
   const restoredRef = useRef(false);
 
+  // DISABLED: Auto-selection from localStorage
+  // User wants locations available in dropdown but NOT auto-selected
+  /*
   useEffect(() => {
-  if (restoredRef.current) return;
-  if (!centres || centres.length === 0) return;
+    if (restoredRef.current) return;
+    if (!centres || centres.length === 0) return;
 
-  const saved = localStorage.getItem("locationSelection");
-  if (!saved) return;
+    const saved = localStorage.getItem("locationSelection");
+    if (!saved) return;
 
-  try {
-    const parsed = JSON.parse(saved);
+    try {
+      const parsed = JSON.parse(saved);
 
-    setFormData((prev) => ({
-      ...prev,
-      regionIds: parsed.regionIds || [],
-      branchIds: parsed.branchIds || [],
-      centreIds: parsed.centreIds || [],
-    }));
+      console.log('🔍 LocationSelector: Reading locationSelection:', {
+        raw: saved,
+        parsed: parsed,
+        regionIds: parsed.regionIds?.length || 0,
+        branchIds: parsed.branchIds?.length || 0,
+        centreIds: parsed.centreIds?.length || 0
+      });
 
-    restoredRef.current = true;
-  } catch (e) {
-    console.error("Invalid locationSelection in localStorage");
-  }
-}, [centres]);
+      setFormData((prev) => ({
+        ...prev,
+        regionIds: parsed.regionIds || [],
+        branchIds: parsed.branchIds || [],
+        centreIds: parsed.centreIds || [],
+      }));
+
+      restoredRef.current = true;
+    } catch (e) {
+      console.error("Invalid locationSelection in localStorage");
+    }
+  }, [centres]);
+  */
 
 
-// console.log("LocationSelector centres 👉", centres);
-// useEffect(() => {
-//   const saved = localStorage.getItem("locationSelection");
-//   if (saved) {
-//     try {
-//       const parsed = JSON.parse(saved);
-//       setFormData((prev) => ({
-//         ...prev,
-//         regionIds: parsed.regionIds || [],
-//         branchIds: parsed.branchIds || [],
-//         centreIds: parsed.centreIds || [],
-//       }));
-//     } catch (e) {
-//       console.error("Invalid locationSelection in localStorage");
-//     }
-//   }
-// }, []);
+  // console.log("LocationSelector centres 👉", centres);
+  // useEffect(() => {
+  //   const saved = localStorage.getItem("locationSelection");
+  //   if (saved) {
+  //     try {
+  //       const parsed = JSON.parse(saved);
+  //       setFormData((prev) => ({
+  //         ...prev,
+  //         regionIds: parsed.regionIds || [],
+  //         branchIds: parsed.branchIds || [],
+  //         centreIds: parsed.centreIds || [],
+  //       }));
+  //     } catch (e) {
+  //       console.error("Invalid locationSelection in localStorage");
+  //     }
+  //   }
+  // }, []);
 
-useEffect(() => {
-  localStorage.setItem(
-    "locationSelection",
-    JSON.stringify({
-      regionIds: formData.regionIds,
-      branchIds: formData.branchIds,
-      centreIds: formData.centreIds,
-    })
-  );
-}, [formData.regionIds, formData.branchIds, formData.centreIds]);
+  useEffect(() => {
+    localStorage.setItem(
+      "locationSelection",
+      JSON.stringify({
+        regionIds: formData.regionIds,
+        branchIds: formData.branchIds,
+        centreIds: formData.centreIds,
+      })
+    );
+  }, [formData.regionIds, formData.branchIds, formData.centreIds]);
 
 
   return (
@@ -321,7 +333,7 @@ useEffect(() => {
               );
               return [...selectedRegions, ...availableRegions];
             })()}
-            
+
             onChange={(selected) => {
               if (selected) {
                 if (selected.isSelected) {
@@ -466,7 +478,7 @@ useEffect(() => {
 
               return [...(selectAllOption ? [selectAllOption] : []), ...selectedAreas, ...availableAreas];
             })()}
-            
+
             onChange={(selected) => {
               if (selected) {
                 if (selected.isSelectAll) {
@@ -620,7 +632,7 @@ useEffect(() => {
 
               return [...(selectAllOption ? [selectAllOption] : []), ...selectedCenters, ...availableCenters];
             })()}
-            
+
             onChange={(selected) => {
               if (selected) {
                 if (selected.isSelectAll) {

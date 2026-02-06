@@ -166,7 +166,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
       if (storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
-        
+
           setUserDetails(parsedUser);
           setEditedUser({
             name: parsedUser.name,
@@ -368,61 +368,61 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
 
   const processDetailedCentresDataWithFiltering = async (centresData) => {
 
-  // ✅ FLATTEN BACKEND RESPONSE
-  const centres = centresData.map(({ centre, branch, region }) => ({
-    id: centre.id,
-    id: centre.id,
-    name: centre.name,
-    centreId: centre.centreId,
-    shortCode: centre.shortCode,
+    // ✅ FLATTEN BACKEND RESPONSE
+    const centres = centresData.map(({ centre, branch, region }) => ({
+      id: centre.id,
+      id: centre.id,
+      name: centre.name,
+      centreId: centre.centreId,
+      shortCode: centre.shortCode,
 
-    branchId: branch?.id || null,
-    branchName: branch?.name || null,
-    branchShortCode: branch?.shortCode || null,
+      branchId: branch?.id || null,
+      branchName: branch?.name || null,
+      branchShortCode: branch?.shortCode || null,
 
-    regionId: region?.id || null,
-    regionName: region?.name || null,
-    regionShortCode: region?.shortCode || null,
-  }));
+      regionId: region?.id || null,
+      regionName: region?.name || null,
+      regionShortCode: region?.shortCode || null,
+    }));
 
-  // ✅ same as your existing logic
-  setAllCentres(centres);
-  setAvailableCentres(centres);
+    // ✅ same as your existing logic
+    setAllCentres(centres);
+    setAvailableCentres(centres);
 
-  // -------- BRANCHES ----------
-  const branchesMap = new Map();
-  centres.forEach((c) => {
-    if (c.branchId && c.branchName) {
-      branchesMap.set(c.branchId, {
-        id: c.branchId,
-        id: c.branchId,
-        name: c.branchName,
-        shortCode: c.branchShortCode,
-        regionId: c.regionId,
-      });
-    }
-  });
+    // -------- BRANCHES ----------
+    const branchesMap = new Map();
+    centres.forEach((c) => {
+      if (c.branchId && c.branchName) {
+        branchesMap.set(c.branchId, {
+          id: c.branchId,
+          id: c.branchId,
+          name: c.branchName,
+          shortCode: c.branchShortCode,
+          regionId: c.regionId,
+        });
+      }
+    });
 
-  const branches = Array.from(branchesMap.values());
-  setAllBranches(branches);
-  setAvailableBranches(branches);
+    const branches = Array.from(branchesMap.values());
+    setAllBranches(branches);
+    setAvailableBranches(branches);
 
-  // -------- REGIONS ----------
-  const regionsMap = new Map();
-  centres.forEach((c) => {
-    if (c.regionId && c.regionName) {
-      regionsMap.set(c.regionId, {
-        id: c.regionId,
-        id: c.regionId,
-        name: c.regionName,
-        shortCode: c.regionShortCode,
-      });
-    }
-  });
+    // -------- REGIONS ----------
+    const regionsMap = new Map();
+    centres.forEach((c) => {
+      if (c.regionId && c.regionName) {
+        regionsMap.set(c.regionId, {
+          id: c.regionId,
+          id: c.regionId,
+          name: c.regionName,
+          shortCode: c.regionShortCode,
+        });
+      }
+    });
 
-  const regions = Array.from(regionsMap.values());
-  setAvailableRegions(regions);
-};
+    const regions = Array.from(regionsMap.values());
+    setAvailableRegions(regions);
+  };
 
 
   const loadMockData = async () => {
@@ -480,7 +480,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
     setIsSaving(true);
     try {
       // API call to update user access
-      
+
       const userId = userDetails.userId || userDetails.id || userDetails.id;
 
       if (!userId) {
@@ -497,7 +497,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
       // Make API call to update user
       const token = localStorage.getItem('authToken');
       const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'https://backend.st9.in'}/api/auth/${userId}`;
-    
+
 
       const response = await fetch(apiUrl, {
         method: 'PUT',
@@ -525,9 +525,9 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
         branchIds: updateData.branchIds,
         regionIds: updateData.regionIds
       };
-      
+
       setUserDetails(updatedUserData);
-      
+
       // Also update localStorage if it exists
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
@@ -544,9 +544,9 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
           console.log("Could not update localStorage:", e);
         }
       }
-      
+
       setIsEditing(false);
-      
+
       // Show success message
       alert("User access updated successfully!");
     } catch (error) {
@@ -635,7 +635,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
     if (type === 'region') {
       // When region selection changes, filter branches and centres
       const remainingRegionIds = newIds;
-      
+
       if (remainingRegionIds.length === 0) {
         // No regions selected - show all branches and centres
         setSelectedRegionId('');
@@ -644,44 +644,68 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
         setAvailableCentres(allCentres);
       } else {
         // One or more regions selected - show branches and centres for all selected regions
-        const filteredBranches = allBranches.filter(branch => 
+        const filteredBranches = allBranches.filter(branch =>
           remainingRegionIds.includes(branch.regionId)
         );
         setAvailableBranches(filteredBranches);
-        
-        const filteredCentres = allCentres.filter(centre => 
+
+        const filteredCentres = allCentres.filter(centre =>
           remainingRegionIds.includes(centre.regionId)
         );
         setAvailableCentres(filteredCentres);
-        
+
         // Reset branch selection when region selection changes
         setSelectedBranchId('');
-        
       }
     } else if (type === 'branch') {
       // When branch selection changes, filter centres
       const remainingBranchIds = newIds;
-      
+      const selectedCentreIds = updatedUser.centreIds || [];
+
       if (remainingBranchIds.length === 0) {
         // No branches selected - show centres based on region selection
         setSelectedBranchId('');
         const selectedRegionIds = updatedUser.regionIds || [];
-        
+
         if (selectedRegionIds.length > 0) {
-          const filteredCentres = allCentres.filter(centre => 
-            selectedRegionIds.includes(centre.regionId)
+          const filteredCentres = allCentres.filter((centre) =>
+            selectedRegionIds.includes(centre.regionId) ||
+            selectedCentreIds.includes(centre.id)
           );
           setAvailableCentres(filteredCentres);
         } else {
+          // Show all centres but keep directly selected ones visible
           setAvailableCentres(allCentres);
         }
       } else {
         // One or more branches selected - show centres for all selected branches
-        const filteredCentres = allCentres.filter(centre => 
-          remainingBranchIds.includes(centre.branchId)
+        const filteredCentres = allCentres.filter((centre) =>
+          remainingBranchIds.includes(centre.branchId) ||
+          selectedCentreIds.includes(centre.id)
         );
         setAvailableCentres(filteredCentres);
       }
+    } else if (type === 'centre') {
+      // When centre selection changes, auto-select related branch & region
+      const remainingCentreIds = newIds;
+      const centresSelected = allCentres.filter((c) =>
+        remainingCentreIds.includes(c.id)
+      );
+      const branchesFromCentres = Array.from(
+        new Set(centresSelected.map((c) => c.branchId).filter(Boolean))
+      );
+      const regionsFromCentres = Array.from(
+        new Set(centresSelected.map((c) => c.regionId).filter(Boolean))
+      );
+
+      setEditedUser((prev) => ({
+        ...prev,
+        branchIds: Array.from(new Set([...(prev.branchIds || []), ...branchesFromCentres])),
+        regionIds: Array.from(new Set([...(prev.regionIds || []), ...regionsFromCentres])),
+      }));
+
+      // Keep all centres visible
+      setAvailableCentres(allCentres);
     }
   };
 
@@ -722,42 +746,42 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
         // Group branches by region
         const selectedBranches = options.filter(branch => assignedIds.includes(branch.id || branch.id));
         const groupedByRegion = {};
-        
+
         selectedBranches.forEach(branch => {
           const region = availableRegions.find(r => (r.id || r.id) === branch.regionId);
           const regionName = region ? region.name : 'Unknown Region';
           const regionCode = region ? (region.shortCode || region.short_code || '') : '';
           const displayName = regionCode ? `${regionName} (${regionCode})` : regionName;
-          
+
           if (!groupedByRegion[displayName]) {
             groupedByRegion[displayName] = [];
           }
           groupedByRegion[displayName].push(branch);
         });
-        
+
         return groupedByRegion;
       } else if (type === 'centre' && assignedIds.length > 0) {
         // Group centres by branch and region
         const selectedCentres = options.filter(centre => assignedIds.includes(centre.id || centre.id));
         const groupedByBranch = {};
-        
+
         selectedCentres.forEach(centre => {
           const branch = allBranches.find(b => (b.id || b.id) === centre.branchId);
           const region = availableRegions.find(r => (r.id || r.id) === centre.regionId);
-          
+
           const branchName = branch ? branch.name : 'Unknown Branch';
           const regionName = region ? region.name : 'Unknown Region';
           const branchCode = branch ? (branch.shortCode || branch.short_code || '') : '';
           const regionCode = region ? (region.shortCode || region.short_code || '') : '';
-          
+
           const groupKey = `${regionName}${regionCode ? ` (${regionCode})` : ''} > ${branchName}${branchCode ? ` (${branchCode})` : ''}`;
-          
+
           if (!groupedByBranch[groupKey]) {
             groupedByBranch[groupKey] = [];
           }
           groupedByBranch[groupKey].push(centre);
         });
-        
+
         return groupedByBranch;
       }
       return {};
@@ -767,9 +791,9 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
     const hasSelectedItems = assignedIds.length > 0;
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium text-gray-700">
+          <h4 className="text-xs font-semibold text-gray-700">
             {title} (Assigned: {assignedCount}, Available: {filteredOptions.length})
           </h4>
           {isEditing && (
@@ -778,24 +802,24 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
               placeholder={type === 'centre' ? `Search ${title.toLowerCase()}... (name, code, ID)` : `Search ${title.toLowerCase()}...`}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className={`px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white ${type === 'centre' ? 'w-48' : 'w-32'}`}
+              className={`px-2 py-0.5 text-[11px] border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white ${type === 'centre' ? 'w-40' : 'w-28'}`}
             />
           )}
         </div>
 
         {/* Select All / Deselect All Controls */}
         {isEditing && filteredOptions.length > 0 && (
-          <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg border">
+          <div className="flex items-center justify-between bg-gray-50 px-2 py-1.5 rounded-lg border">
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => handleSelectAll(type, filteredOptions)}
-                className="px-3 py-1 text-xs bg-gray-700 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
+                className="px-2 py-0.5 text-[11px] bg-gray-700 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
               >
                 Select All ({filteredOptions.length})
               </button>
               <button
                 onClick={() => handleDeselectAll(type, filteredOptions)}
-                className="px-3 py-1 text-xs bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors font-medium"
+                className="px-2 py-0.5 text-[11px] bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors font-medium"
               >
                 Deselect All
               </button>
@@ -812,7 +836,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                       applyHierarchicalFiltering(type, [], { ...editedUser, [`${type}Ids`]: [] });
                     }, 0);
                   }}
-                  className="px-3 py-1 text-xs bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors font-medium"
+                  className="px-2 py-0.5 text-[11px] bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors font-medium"
                 >
                   Clear All ({assignedCount})
                 </button>
@@ -823,26 +847,26 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
 
         {/* Show Selected Items Grouped (when not editing and has selections) */}
         {!isEditing && hasSelectedItems && (type === 'branch' || type === 'centre') && (
-          <div className="space-y-3 mb-4">
-            <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center">
+          <div className="space-y-2 mb-3">
+            <h5 className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide flex items-center">
               <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
               Selected {title} by {type === 'branch' ? 'Region' : 'Branch & Region'}
             </h5>
             {Object.entries(selectedGrouped).map(([groupName, items]) => (
-              <div key={groupName} className="border border-green-200 rounded-lg bg-50-100 p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <h6 className="text-sm text-zinc-700 flex items-center">
-                    <div className="w-3 h-3 bg-green-100 rounded mr-2"></div>
+              <div key={groupName} className="border border-green-200 rounded-lg bg-50-100 p-2">
+                <div className="flex items-center justify-between mb-1">
+                  <h6 className="text-xs text-zinc-700 flex items-center">
+                    <div className="w-2 h-2 bg-green-100 rounded mr-2"></div>
                     {groupName}
                   </h6>
-                  <span className="text-xs bg-green-200 text-green-700 px-2 py-1 rounded-full font-medium">
+                  <span className="text-[11px] bg-green-200 text-green-700 px-2 py-0.5 rounded-full font-medium">
                     {items.length} {items.length === 1 ? 'item' : 'items'}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {items.map((item) => (
-                    <div key={item.id || item.id} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-600 ">
-                      <FiCheck className="text-green-500 text-sm flex-shrink-0 mr-1" />
+                    <div key={item.id || item.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-100 text-green-700 border border-green-600">
+                      <FiCheck className="text-green-500 text-[11px] flex-shrink-0 mr-1" />
                       <span className="truncate max-w-20" title={item.name}>
                         {item.name}
                       </span>
@@ -866,12 +890,12 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
 
         {/* Show Selected Items (for regions or when editing) */}
         {!isEditing && hasSelectedItems && type === 'region' && (
-          <div className="space-y-1 mb-4 border border-green-200 rounded-md p-2 bg-zinc-50">
-            <h5 className="text-xs font-medium text-green-700 uppercase tracking-wide">Selected {title}</h5>
+          <div className="space-y-1 mb-3 border border-green-200 rounded-md p-2 bg-zinc-50">
+            <h5 className="text-[11px] font-medium text-green-700 uppercase tracking-wide">Selected {title}</h5>
             <div className="flex flex-wrap gap-1">
               {options.filter(option => assignedIds.includes(option.id || option.id)).map((option) => (
-                <div key={option.id || option.id} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-600 ">
-                  <FiCheck className="text-green-500 text-xs flex-shrink-0 mr-1" />
+                <div key={option.id || option.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-100 text-green-700 border border-green-600">
+                  <FiCheck className="text-green-500 text-[11px] flex-shrink-0 mr-1" />
                   <span className="truncate max-w-20" title={option.name}>
                     {option.name}
                   </span>
@@ -888,39 +912,36 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
 
         {/* Filter info */}
         {isEditing && (selectedRegionId || selectedBranchId) && (
-          <div className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+          <div className="text-[11px] text-gray-600 bg-gray-100 px-2 py-1 rounded">
             {selectedRegionId &&
               !selectedBranchId &&
               type === "branch" &&
-              `Showing branches in ${
-                availableRegions.find((r) => r.id === selectedRegionId)?.name ||
-                "selected region"
+              `Showing branches in ${availableRegions.find((r) => r.id === selectedRegionId)?.name ||
+              "selected region"
               }`}
             {selectedBranchId &&
               type === "centre" &&
-              `Showing centres in ${
-                availableBranches.find((b) => b.id === selectedBranchId)
-                  ?.name || "selected branch"
+              `Showing centres in ${availableBranches.find((b) => b.id === selectedBranchId)
+                ?.name || "selected branch"
               }`}
             {selectedRegionId &&
               !selectedBranchId &&
               type === "centre" &&
-              `Showing centres in ${
-                availableRegions.find((r) => r.id === selectedRegionId)?.name ||
-                "selected region"
+              `Showing centres in ${availableRegions.find((r) => r.id === selectedRegionId)?.name ||
+              "selected region"
               }`}
           </div>
         )}
 
         {/* Available Options (when editing) */}
         {isEditing && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Available Options List - Capsule Design with Grouping */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <h5 className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center">
+              <div className="flex items-center justify-between mb-1">
+                <h5 className="text-[11px] font-medium text-gray-600 uppercase tracking-wide flex items-center">
                   <span>Available {title} {filter && `(filtered)`}</span>
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full ml-2">
+                  <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full ml-2">
                     {filteredOptions.length} available
                   </span>
                 </h5>
@@ -948,10 +969,10 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                           if (!grouped[groupKey]) grouped[groupKey] = [];
                         });
                       }
-                      
+
                       const groupKeys = Object.keys(grouped);
                       const allCollapsed = groupKeys.every(key => isGroupCollapsed(key));
-                      
+
                       const newCollapsedState = { ...collapsedGroups };
                       groupKeys.forEach(key => {
                         newCollapsedState[`${type}-${key}`] = !allCollapsed;
@@ -983,7 +1004,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                             if (!grouped[groupKey]) grouped[groupKey] = [];
                           });
                         }
-                        
+
                         const groupKeys = Object.keys(grouped);
                         const allCollapsed = groupKeys.every(key => isGroupCollapsed(key));
                         return allCollapsed ? 'Expand All' : 'Collapse All';
@@ -992,14 +1013,14 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                   </button>
                 )}
               </div>
-              
+
               {filteredOptions.length === 0 ? (
                 <div className="text-xs text-gray-500 text-center py-4 border border-dashed border-gray-300 rounded-lg">
                   {filter
                     ? `No ${title.toLowerCase()} found for "${filter}"`
                     : selectedRegionId || selectedBranchId
-                    ? `No ${title.toLowerCase()} in selected filter`
-                    : `No ${title.toLowerCase()} available`}
+                      ? `No ${title.toLowerCase()} in selected filter`
+                      : `No ${title.toLowerCase()} available`}
                 </div>
               ) : (
                 <div className="border rounded-lg p-2 bg-white max-h-80 overflow-y-auto">
@@ -1007,14 +1028,14 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                     // Grouped display for branches and centres
                     (() => {
                       const grouped = {};
-                      
+
                       if (type === 'branch') {
                         filteredOptions.forEach(branch => {
                           const region = availableRegions.find(r => (r.id || r.id) === branch.regionId);
                           const regionName = region ? region.name : 'Unknown Region';
                           const regionCode = region ? (region.shortCode || region.short_code || '') : '';
                           const groupKey = regionCode ? `${regionName} (${regionCode})` : regionName;
-                          
+
                           if (!grouped[groupKey]) grouped[groupKey] = [];
                           grouped[groupKey].push(branch);
                         });
@@ -1022,22 +1043,22 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                         filteredOptions.forEach(centre => {
                           const branch = allBranches.find(b => (b.id || b.id) === centre.branchId);
                           const region = availableRegions.find(r => (r.id || r.id) === centre.regionId);
-                          
+
                           const branchName = branch ? branch.name : 'Unknown Branch';
                           const regionName = region ? region.name : 'Unknown Region';
                           const branchCode = branch ? (branch.shortCode || branch.short_code || '') : '';
                           const regionCode = region ? (region.shortCode || region.short_code || '') : '';
-                          
+
                           const groupKey = `${regionName}${regionCode ? ` (${regionCode})` : ''} > ${branchName}${branchCode ? ` (${branchCode})` : ''}`;
-                          
+
                           if (!grouped[groupKey]) grouped[groupKey] = [];
                           grouped[groupKey].push(centre);
                         });
                       }
-                      
+
                       return Object.entries(grouped).map(([groupName, groupItems]) => (
                         <div key={groupName} className="mb-3 last:mb-0">
-                          <div 
+                          <div
                             className="flex items-center justify-between mb-1 cursor-pointer hover:bg-gray-50 p-1 rounded"
                             onClick={() => toggleGroup(groupName)}
                           >
@@ -1060,18 +1081,17 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                                 const optionId = option.id || option.id;
                                 const isSelected = assignedIds.includes(optionId);
                                 const displayName = option.name;
-                                const shortCode = (type === 'centre' && (option.centreId || option.shortCode || option.short_code)) 
-                                  ? `${option.centreId || option.shortCode || option.short_code}` 
+                                const shortCode = (type === 'centre' && (option.centreId || option.shortCode || option.short_code))
+                                  ? `${option.centreId || option.shortCode || option.short_code}`
                                   : (option.shortCode || option.short_code || '');
 
                                 return (
-                                  <label 
-                                    key={optionId} 
-                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 border ${
-                                      isSelected 
-                                        ? 'bg-gray-700 text-white border-gray-700 ' 
-                                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
-                                    }`}
+                                  <label
+                                    key={optionId}
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 border ${isSelected
+                                      ? 'bg-gray-700 text-white border-gray-700 '
+                                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                                      }`}
                                   >
                                     <input
                                       type="checkbox"
@@ -1105,13 +1125,12 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                         const shortCode = option.shortCode || option.short_code || '';
 
                         return (
-                          <label 
-                            key={optionId} 
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 border ${
-                              isSelected 
-                                ? 'bg-gray-700 text-white border-gray-700 ' 
-                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
-                            }`}
+                          <label
+                            key={optionId}
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 border ${isSelected
+                              ? 'bg-gray-700 text-white border-gray-700 '
+                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                              }`}
                           >
                             <input
                               type="checkbox"
@@ -1165,13 +1184,13 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                         const optionId = item.id || item.id;
                         const isSelected = assignedIds.includes(optionId);
                         const displayName = item.name;
-                        const shortCode = (type === 'centre' && (item.centreId || item.shortCode || item.short_code)) 
-                          ? `${item.centreId || item.shortCode || item.short_code}` 
+                        const shortCode = (type === 'centre' && (item.centreId || item.shortCode || item.short_code))
+                          ? `${item.centreId || item.shortCode || item.short_code}`
                           : (item.shortCode || item.short_code || '');
-                        
+
                         return (
-                          <label 
-                            key={optionId} 
+                          <label
+                            key={optionId}
                             className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 border bg-green-100 text-green-700 border-green-600  hover:bg-green-200"
                           >
                             <input
@@ -1215,10 +1234,10 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                       const optionId = option.id || option.id;
                       const displayName = option.name;
                       const shortCode = option.shortCode || option.short_code || '';
-                      
+
                       return (
-                        <label 
-                          key={optionId} 
+                        <label
+                          key={optionId}
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 border bg-green-100 text-green-700 border-green-600  hover:bg-green-200"
                         >
                           <input
@@ -1253,8 +1272,8 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                 (type === "region"
                   ? availableRegions.length
                   : type === "branch"
-                  ? allBranches.length
-                  : allCentres.length) && ` (of ${options.length} filtered)`}
+                    ? allBranches.length
+                    : allCentres.length) && ` (of ${options.length} filtered)`}
             </span>
             <div className="flex items-center space-x-2">
               {filter && (
@@ -1275,28 +1294,28 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-2">
-      <div className="bg-white rounded-lg  w-[98%] max-w-[1400px] max-h-[98vh] min-h-[95vh] overflow-hidden">
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-2">
+      <div className="bg-white rounded-2xl w-[98%] max-w-[1400px] max-h-[94vh] min-h-[90vh] overflow-hidden shadow-2xl flex flex-col border border-slate-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-              <FiUser className="text-gray-600 text-lg" />
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-white/90 backdrop-blur-sm sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
+              <FiUser className="text-slate-600 text-lg" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-slate-900">
                 User Profile
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-500">
                 Manage user details and access
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             {!isEditing && (
               <button
                 onClick={handleEdit}
-                className="px-3 py-1.5 text-sm bg-gray-700 text-white rounded-md hover:bg-gray-800 flex items-center space-x-1"
+                className="px-3 py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 flex items-center gap-1"
               >
                 <FiEdit3 className="text-xs" />
                 <span>Edit</span>
@@ -1304,7 +1323,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
             )}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-slate-400 hover:text-slate-600"
             >
               <FiX className="text-xl" />
             </button>
@@ -1312,7 +1331,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto min-h-[78vh] max-h-[calc(95vh-140px)]">
+        <div className="p-4 overflow-y-auto flex-1 bg-slate-50">
           {isLoading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -1320,24 +1339,29 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
           ) : userDetails ? (
             <div className="space-y-6">
               {/* Access Management */}
-              <div className="bg-gray-50 rounded-lg p-4 space-y-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <h3 className="text-md font-medium text-gray-900">
-                    Access Management
-                  </h3>
+              <div className="bg-white rounded-2xl p-3 sm:p-4 space-y-4 border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-md font-semibold text-slate-900">
+                      Access Management
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Configure regions, branches, and centres
+                    </p>
+                  </div>
                   {isEditing && (
-                    <span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">
+                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
                       Edit Mode
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Regions */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <FiGlobe className="text-gray-500" />
-                      <span className="font-medium text-gray-700">Regions</span>
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FiGlobe className="text-slate-500" />
+                      <span className="font-semibold text-slate-700">Regions</span>
                     </div>
                     {renderAccessSection(
                       "Regions",
@@ -1349,10 +1373,10 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                   </div>
 
                   {/* Branches */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <FiHome className="text-gray-500" />
-                      <span className="font-medium text-gray-700">
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FiHome className="text-slate-500" />
+                      <span className="font-semibold text-slate-700">
                         Branches
                       </span>
                     </div>
@@ -1366,10 +1390,10 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
                   </div>
 
                   {/* Centres */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <FiMapPin className="text-gray-500" />
-                      <span className="font-medium text-gray-700">Centres</span>
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FiMapPin className="text-slate-500" />
+                      <span className="font-semibold text-slate-700">Centres</span>
                     </div>
                     {renderAccessSection(
                       "Centres",
@@ -1407,10 +1431,10 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
 
         {/* Footer */}
         {isEditing && (
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-white/90 backdrop-blur-sm">
             <button
               onClick={handleCancel}
-              className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center space-x-1"
+              className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-1"
             >
               <FiXCircle className="text-xs" />
               <span>Cancel</span>
@@ -1418,7 +1442,7 @@ const UserProfile = ({ isOpen, onClose, currentUser }) => {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-4 py-2 text-sm bg-gray-700 text-white rounded-md hover:bg-gray-800 disabled:opacity-50 flex items-center space-x-1"
+              className="px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 disabled:opacity-50 flex items-center gap-1"
             >
               {isSaving ? (
                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>

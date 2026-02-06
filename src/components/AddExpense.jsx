@@ -5,7 +5,7 @@ import {
   FiX,
   FiAlertTriangle,
 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import ExpenseForm from "./ui/ExpenseForm";
 import ExpensesTable from "./ui/ExpensesTable";
 import EditExpenseModal from "./ui/EditExpenseModal";
@@ -17,6 +17,7 @@ import { getCentresWithDetails } from "../utils/centresApi";
 
 const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState("");
@@ -84,34 +85,56 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editExpenseId, setEditExpenseId] = useState(null);
 
+  // DISABLED: Auto-selection from navigation state
+  // User wants locations available but NOT auto-selected
+  /*
+  useEffect(() => {
+    if (location.state?.fromLogin && location.state?.locationSelection) {
+      const { regionIds, branchIds, centreIds } = location.state.locationSelection;
+      console.log('🔍 AddExpense: Received location data from navigation state:', {
+        regionIds: regionIds?.length || 0,
+        branchIds: branchIds?.length || 0,
+        centreIds: centreIds?.length || 0
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        regionIds: regionIds || [],
+        branchIds: branchIds || [],
+        centreIds: centreIds || []
+      }));
+    }
+  }, [location.state]);
+  */
+
   useEffect(() => {
     // Get current user data from props first, then fallback to API
     const user = propCurrentUser || authAPI.getCurrentUser();
     setCurrentUser(user);
     setIsDataLoading(true);
     getCentresWithDetails()
-  .then((data) => {
-    // ✅ NORMALIZE ONCE FOR AddExpense UI
-    const normalizedCentres = data.map(({ centre, branch, region }) => ({
-      id: centre.id,
-      name: centre.name,
-      centreId: centre.centreId,
+      .then((data) => {
+        // ✅ NORMALIZE ONCE FOR AddExpense UI
+        const normalizedCentres = data.map(({ centre, branch, region }) => ({
+          id: centre.id,
+          name: centre.name,
+          centreId: centre.centreId,
 
-      branchId: {
-        id: branch?.id,
-        name: branch?.name,
-      },
+          branchId: {
+            id: branch?.id,
+            name: branch?.name,
+          },
 
-      regionId: {
-        id: region?.id,
-        name: region?.name,
-      },
-    }));
+          regionId: {
+            id: region?.id,
+            name: region?.name,
+          },
+        }));
 
-    setCentres(normalizedCentres);
-  })
-  .catch(() => setCentres([]))
-  .finally(() => setIsDataLoading(false));
+        setCentres(normalizedCentres);
+      })
+      .catch(() => setCentres([]))
+      .finally(() => setIsDataLoading(false));
 
     // Fetch existing expenses
     fetchExpenses();
@@ -131,6 +154,13 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
   useEffect(() => {
     if (formData.regionIds.length > 0 && currentUser) {
       const userBranchIds = currentUser.branchIds || [];
+
+      // SKIP VALIDATION if currentUser doesn't have branchIds (prevents clearing on login)
+      if (userBranchIds.length === 0) {
+        console.log('⚠️ Skipping branch validation - currentUser has no branchIds');
+        return;
+      }
+
       const branches = centres.filter(
         (centre) =>
           formData.regionIds.includes(centre.regionId?.id) &&
@@ -138,7 +168,7 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       );
       setFilteredBranches(branches);
 
-      // Remove any branchIds that are no longer valid (not in any selected region or not accessible to user)
+      // Remove any branchIds that are no longer valid
       const validBranchIds = [...new Set(branches.map((c) => c.branchId?.id))];
       const filteredBranchIds = formData.branchIds.filter((branchId) =>
         validBranchIds.includes(branchId)
@@ -149,7 +179,6 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       }
     } else {
       setFilteredBranches([]);
-      setFormData((prev) => ({ ...prev, branchIds: [], centreIds: [] }));
     }
   }, [formData.regionIds, centres, currentUser]);
 
@@ -157,6 +186,13 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
   useEffect(() => {
     if (formData.branchIds.length > 0 && currentUser) {
       const userCentreIds = currentUser.centreIds || [];
+
+      // SKIP VALIDATION if currentUser doesn't have centreIds (prevents clearing on login)
+      if (userCentreIds.length === 0) {
+        console.log('⚠️ Skipping centre validation - currentUser has no centreIds');
+        return;
+      }
+
       const centresFiltered = centres.filter(
         (centre) =>
           formData.branchIds.includes(centre.branchId?.id) &&
@@ -164,7 +200,7 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       );
       setFilteredCentres(centresFiltered);
 
-      // Remove any centreIds that are no longer valid (not in any selected branch or not accessible to user)
+      // Remove any centreIds that are no longer valid
       const validCentreIds = centresFiltered.map((c) => c.id);
       const filteredCentreIds = formData.centreIds.filter((centreId) =>
         validCentreIds.includes(centreId)
@@ -175,7 +211,6 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       }
     } else {
       setFilteredCentres([]);
-      setFormData((prev) => ({ ...prev, centreIds: [] }));
     }
   }, [formData.branchIds, centres, currentUser]);
 
@@ -229,31 +264,31 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       // Call the new endpoint
       const response = await adExpenseAPI.getAdExpensesByUserId(userId);
 
-// ✅ NORMALIZE BACKEND DATA → FRONTEND SHAPE
-const normalizedExpenses = (response || []).map(exp => ({
-  ...exp,
+      // ✅ NORMALIZE BACKEND DATA → FRONTEND SHAPE
+      const normalizedExpenses = (response || []).map(exp => ({
+        ...exp,
 
-  // 🔹 match frontend naming
-  GST: exp.GST ?? exp.gst,
-  TdsAmount: exp.TdsAmount ?? exp.tdsAmount,
+        // 🔹 match frontend naming
+        GST: exp.GST ?? exp.gst,
+        TdsAmount: exp.TdsAmount ?? exp.tdsAmount,
 
-  // 🔹 normalize bank account (table expects object)
-  bankAccount: exp.bankAccount ?? (
-    exp.bankAccountId || exp.bankName
-      ? {
-          id: exp.bankAccountId,
-          bankName: exp.bankName,
-        }
-      : null
-  ),
+        // 🔹 normalize bank account (table expects object)
+        bankAccount: exp.bankAccount ?? (
+          exp.bankAccountId || exp.bankName
+            ? {
+              id: exp.bankAccountId,
+              bankName: exp.bankName,
+            }
+            : null
+        ),
 
-  // 🔹 safety default (CRITICAL for table rendering)
-  isDeleted: exp.isDeleted ?? false,
-}));
+        // 🔹 safety default (CRITICAL for table rendering)
+        isDeleted: exp.isDeleted ?? false,
+      }));
 
-// ✅ IMPORTANT: set BOTH states
-setExpenses(normalizedExpenses);
-setFilteredExpenses(normalizedExpenses);
+      // ✅ IMPORTANT: set BOTH states
+      setExpenses(normalizedExpenses);
+      setFilteredExpenses(normalizedExpenses);
 
 
 
@@ -742,7 +777,7 @@ setFilteredExpenses(normalizedExpenses);
 
         // Only add row if it has all required fields
         if (rowData.expenseDate && rowData.paidTo && rowData.amount &&
-            rowData.regionName && rowData.branchName && rowData.centreName) {
+          rowData.regionName && rowData.branchName && rowData.centreName) {
           parsedData.push(rowData);
         }
       }
