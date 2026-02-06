@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { FiUser } from "react-icons/fi"; // Added import
 import LocationSelector from "./LocationSelector";
 import { adExpenseAPI } from "../../utils/apiServices";
+import CustomDatePicker from "../CustomDatePicker";
 
 const paidToOptions = [
   "social media",
@@ -153,13 +154,17 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Date
             </label>
-            <input
-              type="date"
-              name="expenseDate"
-              value={formData.expenseDate}
-              onChange={handleChange}
-              className="w-full p-2 border rounded text-black"
-            />
+            <div className="mt-1">
+              <CustomDatePicker
+                value={formData.expenseDate}
+                onChange={(value) =>
+                  setFormData((prev) => ({ ...prev, expenseDate: value }))
+                }
+                placeholder="Select expense date"
+                disabled={loading}
+                className="text-black"
+              />
+            </div>
           </div>
 
           {/* Paid To Dropdown */}
