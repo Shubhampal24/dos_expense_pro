@@ -1,52 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { adExpenseAPI, userAPI, bankAccountAPI } from "../../utils/apiServices";
-import {
-  getUserFromToken,
-  hasAdminRole,
-  ROLES,
-  ADMIN_ROLES,
-} from "../../utils/helpers";
-import {
-  FiUsers,
-  FiDollarSign,
-  FiTrendingUp,
-  FiCalendar,
-  FiUser,
-  FiCheckCircle,
-  FiClock,
-  FiSearch,
-  FiDownload,
-  FiRefreshCw,
-  FiFilter,
-  FiBarChart2,
-  FiPieChart,
-  FiActivity,
-  FiTarget,
-  FiInfo,
-  FiEye,
-  FiSun,
-  FiList,
-  FiCreditCard,
-  FiX,
-  FiMapPin,
+import { getUserFromToken,hasAdminRole,ROLES,ADMIN_ROLES,} from "../../utils/helpers";
+import { 
+FiUsers,
+FiDollarSign,
+FiTrendingUp,
+FiCalendar,
+FiUser,
+FiCheckCircle,
+FiClock,FiSearch,
+FiDownload,
+FiRefreshCw,
+FiFilter,
+FiBarChart2,
+FiPieChart,
+FiActivity,
+FiTarget,
+FiInfo,
+FiEye,
+FiSun,
+FiList,
+FiCreditCard,
+FiX,
+FiMapPin,
 } from "react-icons/fi";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-} from "recharts";
+import { LineChart,Line,BarChart,Bar,PieChart,Pie,Cell,XAxis,YAxis,CartesianGrid,Tooltip,Legend,ResponsiveContainer,Area,AreaChart,} from "recharts";
+
+import CustomDatePicker from "../CustomDatePicker";
 
 const AdminAnalysis = () => {
   const [analysisData, setAnalysisData] = useState(null);
@@ -217,8 +197,6 @@ const AdminAnalysis = () => {
       const params = {
         unit: timeUnit,
       };
-
-
 
       // ⚠️ Backend allows ONLY ONE date strategy
       if (filters.startDate && filters.endDate) {
@@ -391,8 +369,6 @@ const AdminAnalysis = () => {
     }
   };
 
-
-
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({
       ...prev,
@@ -405,7 +381,6 @@ const AdminAnalysis = () => {
     setCurrentPage(1);
     fetchDashboardData();
   };
-
 
   const resetFilters = () => {
     setFilters({
@@ -703,15 +678,15 @@ const AdminAnalysis = () => {
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
             )}
-
+            
             {/* Advanced Filter Section */}
-            <div className="bg-white rounded-lg  border border-gray-200 mb-6">
-              <div className="flex items-center justify-between p-6 border-b">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  <FiFilter className="inline text-amber-500 mr-2" />
+            <div className="bg-white rounded-lg border border-gray-200 mb-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 border-b gap-3 sm:gap-0">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <FiFilter className="text-amber-500" />
                   Advanced Filters
                 </h2>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={applyFilters}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-400 to-amber-400 text-white font-semibold rounded-lg hover:from-orange-500 hover:to-amber-500 transition-all duration-200"
@@ -731,23 +706,19 @@ const AdminAnalysis = () => {
 
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
                   {/* Quick Date Selection */}
                   <div>
                     <label className="text-sm font-medium text-gray-700">
                       Quick Date Select
-                      {filters.selectedDate && (
-                        <span className="text-green-600 ml-1">●</span>
-                      )}
+                      {filters.selectedDate && <span className="text-green-600 ml-1">●</span>}
                     </label>
-                    <div className="relative mt-1">
-                      <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
-                      <input
-                        type="date"
+                    <div className="mt-1">
+                      <CustomDatePicker
                         value={filters.selectedDate}
-                        onChange={(e) =>
-                          handleFilterChange("selectedDate", e.target.value)
-                        }
-                        className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                        onChange={(value) => handleFilterChange("selectedDate", value)}
+                        placeholder="Select Date"
+                        className="w-full text-black"
                       />
                     </div>
                   </div>
@@ -756,19 +727,15 @@ const AdminAnalysis = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700">
                       Select Month
-                      {filters.selectedMonth && (
-                        <span className="text-green-600 ml-1">●</span>
-                      )}
+                      {filters.selectedMonth && <span className="text-green-600 ml-1">●</span>}
                     </label>
-                    <div className="relative mt-1">
-                      <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
-                      <input
-                        type="month"
+                    <div className="mt-1">
+                      <CustomDatePicker
                         value={filters.selectedMonth}
-                        onChange={(e) =>
-                          handleFilterChange("selectedMonth", e.target.value)
-                        }
-                        className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                        onChange={(value) => handleFilterChange("selectedMonth", value)}
+                        placeholder="Select Month"
+                        showMonthPicker={true} // optional prop for month selection
+                        className="w-full text-black"
                       />
                     </div>
                   </div>
@@ -777,17 +744,13 @@ const AdminAnalysis = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700">
                       Select Quarter
-                      {filters.selectedQuarter && (
-                        <span className="text-green-600 ml-1">●</span>
-                      )}
+                      {filters.selectedQuarter && <span className="text-green-600 ml-1">●</span>}
                     </label>
                     <div className="relative mt-1">
                       <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
                       <select
                         value={filters.selectedQuarter}
-                        onChange={(e) =>
-                          handleFilterChange("selectedQuarter", e.target.value)
-                        }
+                        onChange={(e) => handleFilterChange("selectedQuarter", e.target.value)}
                         className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
                       >
                         <option value="">All Quarters</option>
@@ -807,17 +770,13 @@ const AdminAnalysis = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700">
                       Select Year
-                      {filters.selectedYear && (
-                        <span className="text-green-600 ml-1">●</span>
-                      )}
+                      {filters.selectedYear && <span className="text-green-600 ml-1">●</span>}
                     </label>
                     <div className="relative mt-1">
                       <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
                       <select
                         value={filters.selectedYear}
-                        onChange={(e) =>
-                          handleFilterChange("selectedYear", e.target.value)
-                        }
+                        onChange={(e) => handleFilterChange("selectedYear", e.target.value)}
                         className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
                       >
                         <option value="">All Years</option>
@@ -828,42 +787,34 @@ const AdminAnalysis = () => {
                     </div>
                   </div>
 
-                  {/* Custom Date Range - Start */}
+                  {/* Start Date */}
                   <div>
                     <label className="text-sm font-medium text-gray-700">
                       Start Date
-                      {filters.startDate && (
-                        <span className="text-green-600 ml-1">●</span>
-                      )}
+                      {filters.startDate && <span className="text-green-600 ml-1">●</span>}
                     </label>
-                    <div className="relative mt-1">
-                      <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
-                      <input
-                        type="date"
+                    <div className="mt-1">
+                      <CustomDatePicker
                         value={filters.startDate}
-                        onChange={(e) =>
-                          handleFilterChange("startDate", e.target.value)
-                        }
-                        className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                        onChange={(value) => handleFilterChange("startDate", value)}
+                        placeholder="Start Date"
+                        className="w-full text-black"
                       />
                     </div>
                   </div>
 
-                  {/* Custom Date Range - End */}
+                  {/* End Date */}
                   <div>
                     <label className="text-sm font-medium text-gray-700">
                       End Date
                       {filters.endDate && <span className="text-green-600 ml-1">●</span>}
                     </label>
-                    <div className="relative mt-1">
-                      <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
-                      <input
-                        type="date"
+                    <div className="mt-1">
+                      <CustomDatePicker
                         value={filters.endDate}
-                        onChange={(e) =>
-                          handleFilterChange("endDate", e.target.value)
-                        }
-                        className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                        onChange={(value) => handleFilterChange("endDate", value)}
+                        placeholder="End Date"
+                        className="w-full text-black"
                       />
                     </div>
                   </div>
@@ -893,7 +844,7 @@ const AdminAnalysis = () => {
                 </div>
               </div>
             </div>
-
+            
             {/* View Tabs */}
             <div className="bg-white rounded-lg  border border-gray-200 mb-6">
               <div className="border-b border-gray-200">
