@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FiPlus, 
-  FiEdit2, 
-  FiTrash2, 
-  FiSave, 
-  FiX, 
-  FiDollarSign, 
-  FiUser, 
-  FiCreditCard, 
-  FiMapPin, 
+import {
+  FiPlus,
+  FiEdit2,
+  FiTrash2,
+  FiSave,
+  FiX,
+  FiDollarSign,
+  FiUser,
+  FiCreditCard,
+  FiMapPin,
   FiSearch,
   FiRefreshCw,
   FiEye,
   FiEyeOff
 } from 'react-icons/fi';
-import { bankAccountAPI } from '../utils/apiServices';
+import { bankAccountAPI, authAPI } from '../utils/apiServices';
 
 const BankAccount = ({ currentUser }) => {
   const [accounts, setAccounts] = useState([]);
@@ -59,9 +59,9 @@ const BankAccount = ({ currentUser }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     let processedValue = value;
-    
+
     // Special processing for specific fields
     if (name === 'ifscCode') {
       processedValue = value.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Only allow alphanumeric
@@ -71,7 +71,7 @@ const BankAccount = ({ currentUser }) => {
     } else if (name === 'accountNumber') {
       processedValue = value.replace(/[^0-9]/g, ''); // Only allow numbers
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : processedValue
@@ -122,18 +122,49 @@ const BankAccount = ({ currentUser }) => {
     }
 
     try {
+      // Get userId from multiple sources
+      let userId = currentUser?.userId || currentUser?.id;
+
+      // Fallback: Try to get from localStorage
+      if (!userId) {
+        try {
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            userId = parsedUser.userId || parsedUser.id;
+          }
+        } catch (e) {
+          console.error('Failed to parse user from localStorage:', e);
+        }
+      }
+
+      // Fallback: Try to get from authAPI
+      if (!userId) {
+        const user = authAPI.getCurrentUser();
+        userId = user?.userId || user?.id;
+      }
+
+      if (!userId) {
+        setError('User ID not found. Please login again.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const submitData = {
         ...formData,
         ifscCode: formData.ifscCode.toUpperCase(), // Ensure IFSC is uppercase
         balance: parseFloat(formData.balance) || 0,
-        userId: currentUser?.userId || currentUser?.id
+        userId: userId
       };
+
+      console.log('🔍 BankAccount: Submitting data:', submitData);
+      console.log('🔍 BankAccount: currentUser:', currentUser);
 
       let result;
       if (editingAccount) {
         result = await bankAccountAPI.updateBankAccount(editingAccount.id, submitData);
         setSuccess('Bank account updated successfully!');
-        setAccounts(prev => prev.map(acc => 
+        setAccounts(prev => prev.map(acc =>
           acc.id === editingAccount.id ? result : acc
         ));
       } else {
@@ -141,11 +172,12 @@ const BankAccount = ({ currentUser }) => {
         setSuccess('Bank account added successfully!');
         setAccounts(prev => [result, ...prev]);
       }
-      
+
       handleCancelForm();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Error saving bank account:', error);
+      console.error('Error response:', error.response?.data);
       setError(error.message || 'Error saving bank account');
     } finally {
       setIsSubmitting(false);
@@ -255,7 +287,7 @@ const BankAccount = ({ currentUser }) => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
@@ -264,7 +296,7 @@ const BankAccount = ({ currentUser }) => {
                     <div>
                       <p className="text-sm text-green-600 font-medium">Total Balance</p>
                       <p className="text-2xl font-bold text-green-800">
-                        {showBalances 
+                        {showBalances
                           ? `₹${totalBalance.toLocaleString('en-IN')}`
                           : '••••••••'
                         }
@@ -355,13 +387,12 @@ const BankAccount = ({ currentUser }) => {
                           />
                         </div>
                         {formData.accountNumber && (
-                          <p className={`text-xs mt-1 ${
-                            formData.accountNumber.length >= 8 && formData.accountNumber.length <= 18
-                              ? 'text-green-600' 
-                              : 'text-red-600'
-                          }`}>
+                          <p className={`text-xs mt-1 ${formData.accountNumber.length >= 8 && formData.accountNumber.length <= 18
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                            }`}>
                             {formData.accountNumber.length >= 8 && formData.accountNumber.length <= 18
-                              ? '✓ Valid account number length' 
+                              ? '✓ Valid account number length'
                               : `${formData.accountNumber.length}/18 digits (min: 8, max: 18)`
                             }
                           </p>
@@ -387,13 +418,12 @@ const BankAccount = ({ currentUser }) => {
                           />
                         </div>
                         {formData.ifscCode && formData.ifscCode.length > 0 && (
-                          <p className={`text-xs mt-1 ${
-                            /^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode) && formData.ifscCode.length === 11
-                              ? 'text-green-600' 
-                              : 'text-red-600'
-                          }`}>
+                          <p className={`text-xs mt-1 ${/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode) && formData.ifscCode.length === 11
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                            }`}>
                             {/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode) && formData.ifscCode.length === 11
-                              ? '✓ Valid IFSC format' 
+                              ? '✓ Valid IFSC format'
                               : `${formData.ifscCode.length}/11 characters - Format: BANK0BRANCH`
                             }
                           </p>
@@ -605,7 +635,7 @@ const BankAccount = ({ currentUser }) => {
                               <div className="font-medium text-gray-900">
                                 {account.accountHolder}
                               </div>
-                              <div 
+                              <div
                                 className="text-sm text-gray-500 font-mono cursor-pointer hover:text-gray-700 transition-colors"
                                 title={`Full Account Number: ${account.accountNumber}`}
                               >
@@ -631,18 +661,17 @@ const BankAccount = ({ currentUser }) => {
                           </td>
                           <td className="px-4 py-4">
                             <div className="font-medium text-gray-900">
-                              {showBalances 
+                              {showBalances
                                 ? `₹${(account.balance || 0).toLocaleString('en-IN')}`
                                 : '••••••••'
                               }
                             </div>
                           </td>
                           <td className="px-4 py-4">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              account.isActive
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${account.isActive
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                              }`}>
                               {account.isActive ? 'Active' : 'Inactive'}
                             </span>
                           </td>
