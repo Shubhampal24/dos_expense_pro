@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { FiUser } from "react-icons/fi"; // Added import
+import { FiUser, FiFileText } from "react-icons/fi";
+import Select from "react-select";
 import LocationSelector from "./LocationSelector";
-import { adExpenseAPI } from "../../utils/apiServices";
+import SelectedLocationsDisplay from "./SelectedLocationsDisplay";
+import { bankAccountAPI, adExpenseAPI } from "../../utils/apiServices";
 import CustomDatePicker from "../CustomDatePicker";
 
 const paidToOptions = [
@@ -25,16 +27,19 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
     reason: "",
     amount: "",
     GST: "",
-    TdsAmount: "",
+    tdsAmount: "",
     noOfDays: "",
     verified: false,
     regionIds: [],
     branchIds: [],
     centreIds: [],
     bankAccount: "",
+    createdBy: "",
   });
 
   const [loading, setLoading] = useState(true);
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
   const [filteredBranches, setFilteredBranches] = useState([]);
   const [filteredCentres, setFilteredCentres] = useState([]);
 
@@ -54,7 +59,7 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
           reason: expense.reason || "",
           amount: expense.amount.toString(),
           GST: expense.gst || "",
-          TdsAmount: expense.tdsAmount?.toString() || "",
+          tdsAmount: expense.tdsAmount?.toString() || "",
           noOfDays: expense.noOfDays?.toString() || "",
           verified: expense.verified,
           regionIds: expense.region_ids.map((r) =>
@@ -67,6 +72,7 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
             typeof c === "object" ? c.id : c
           ),
           bankAccount: expense.bankAccountId || "",
+          createdBy: expense.createdBy || "",
         });
 
         setLoading(false);
@@ -79,6 +85,22 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
     if (expenseId) loadExpense();
   }, [expenseId]);
 
+  // Fetch bank accounts
+  useEffect(() => {
+    const fetchBankAccounts = async () => {
+      setLoadingBanks(true);
+      try {
+        const response = await bankAccountAPI.getAllBankAccounts();
+        setBankAccounts(response.data || response || []);
+      } catch (err) {
+        console.error("Error fetching bank accounts:", err);
+      } finally {
+        setLoadingBanks(false);
+      }
+    };
+    fetchBankAccounts();
+  }, []);
+
   // Filter branches based on selected regions and user access
   useEffect(() => {
     if (formData.regionIds.length > 0 && currentUser) {
@@ -89,18 +111,8 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
           userBranchIds.includes(centre.branchId?.id)
       );
       setFilteredBranches(branches);
-
-      const validBranchIds = [...new Set(branches.map((c) => c.branchId?.id))];
-      const filteredBranchIds = formData.branchIds.filter((branchId) =>
-        validBranchIds.includes(branchId)
-      );
-
-      if (filteredBranchIds.length !== formData.branchIds.length) {
-        setFormData((prev) => ({ ...prev, branchIds: filteredBranchIds }));
-      }
     } else {
       setFilteredBranches([]);
-      setFormData((prev) => ({ ...prev, branchIds: [], centreIds: [] }));
     }
   }, [formData.regionIds, centres, currentUser]);
 
@@ -114,18 +126,8 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
           userCentreIds.includes(centre.id)
       );
       setFilteredCentres(centresFiltered);
-
-      const validCentreIds = centresFiltered.map((c) => c.id);
-      const filteredCentreIds = formData.centreIds.filter((centreId) =>
-        validCentreIds.includes(centreId)
-      );
-
-      if (filteredCentreIds.length !== formData.centreIds.length) {
-        setFormData((prev) => ({ ...prev, centreIds: filteredCentreIds }));
-      }
     } else {
       setFilteredCentres([]);
-      setFormData((prev) => ({ ...prev, centreIds: [] }));
     }
   }, [formData.branchIds, centres, currentUser]);
 
@@ -139,7 +141,16 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    const processedData = {
+      ...formData,
+      amount: parseFloat(formData.amount),
+      gst: formData.GST || "",  // Map GST to lowercase gst for backend
+      tdsAmount: formData.tdsAmount ? parseFloat(formData.tdsAmount) : 0,
+      noOfDays: formData.noOfDays ? parseInt(formData.noOfDays, 10) : 0,
+      bankAccountId: formData.bankAccount,
+      createdBy: formData.createdBy,
+    };
+    onSave(processedData);
   };
 
   if (loading) return <div className="p-6 text-center">Loading expense...</div>;
@@ -149,10 +160,11 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
       <h2 className="text-lg font-bold mb-4">Edit Expense</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Date, Paid To, Amount */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date
+              Date *
             </label>
             <div className="mt-1">
               <CustomDatePicker
@@ -167,7 +179,6 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
             </div>
           </div>
 
-          {/* Paid To Dropdown */}
           <div>
             <label className="text-sm font-medium text-gray-700">Paid To *</label>
             <div className="relative mt-1">
@@ -175,9 +186,7 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
               <select
                 name="paidTo"
                 value={formData.paidTo}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, paidTo: e.target.value }))
-                }
+                onChange={handleChange}
                 disabled={loading}
                 className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all duration-200 appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -196,43 +205,233 @@ const EditExpenseModal = ({ expenseId, onSave, onClose, centres, currentUser }) 
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount
+              Amount (₹) *
             </label>
-            <input
-              type="number"
-              name="amount"
-              value={formData.amount}
-              onChange={handleChange}
-              className="w-full p-2 border rounded text-black"
-            />
+            <div className="relative mt-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
+                ₹
+              </span>
+              <input
+                type="number"
+                name="amount"
+                value={formData.amount}
+                onChange={handleChange}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all duration-200"
+              />
+            </div>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Reason
-            </label>
-            <input
-              type="text"
-              name="reason"
-              value={formData.reason}
-              onChange={handleChange}
-              className="w-full p-2 border rounded text-black"
+        {/* Bank Account Field */}
+        <div className="w-full">
+          <label className="text-sm font-medium text-gray-700">
+            Bank Account
+          </label>
+          <div className="relative mt-1">
+            <Select
+              isLoading={loadingBanks}
+              isDisabled={loadingBanks}
+              options={bankAccounts.map((account) => ({
+                value: account.id,
+                label: `${account.accountHolder} - ${account.bankName} (****${account.accountNumber.slice(-4)})`,
+                account: account,
+              }))}
+              value={
+                bankAccounts
+                  .map((account) => ({
+                    value: account.id,
+                    label: `${account.accountHolder} - ${account.bankName} (****${account.accountNumber.slice(-4)})`,
+                    account: account,
+                  }))
+                  .find(
+                    (option) => option.value === formData.bankAccount
+                  ) || null
+              }
+              onChange={(selected) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  bankAccount: selected ? selected.value : "",
+                }));
+              }}
+              placeholder="Select a bank account"
+              classNamePrefix="react-select"
+              isClearable={true}
+              isSearchable={true}
+              formatOptionLabel={(option) => (
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-800">
+                      {option.account.accountHolder}
+                    </span>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                      {option.account.bankName}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    Account: ****{option.account.accountNumber.slice(-4)} | IFSC:{" "}
+                    {option.account.ifscCode}
+                  </div>
+                </div>
+              )}
+              styles={{
+                control: (base, state) => ({
+                  ...base,
+                  minHeight: 42,
+                  fontSize: 14,
+                  borderColor: state.isFocused ? "#f59e0b" : "#d1d5db",
+                  boxShadow: state.isFocused ? "0 0 0 1px #f59e0b" : "none",
+                  "&:hover": {
+                    borderColor: "#f59e0b",
+                  },
+                }),
+                menu: (base) => ({
+                  ...base,
+                  zIndex: 9999,
+                }),
+              }}
             />
           </div>
         </div>
 
-        <LocationSelector
-          formData={formData}
-          setFormData={setFormData}
-          isDataLoading={false}
-          centres={centres}
-          filteredBranches={filteredBranches}
-          filteredCentres={filteredCentres}
-          currentUser={currentUser}
-          accessDeniedEntries={[]}
-          setShowAccessDeniedModal={() => {}}
-          disableLocalStorage={true}
-        />
+        {/* Justdial Specific Fields */}
+        {formData.paidTo === "justdial" && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700">GST Number</label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
+                  #
+                </span>
+                <select
+                  name="GST"
+                  value={formData.GST}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed appearance-none uppercase"
+                >
+                  <option value="">Select GST Number</option>
+                  <option value="27BVDPM3913M1ZB">27BVDPM3913M1ZB</option>
+                  <option value="27AGJPJ1251B1ZW">27AGJPJ1251B1ZW</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                TDS Amount (₹)
+              </label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  name="tdsAmount"
+                  value={formData.tdsAmount}
+                  onChange={handleChange}
+                  disabled={loading}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700">No of Days</label>
+              <select
+                name="noOfDays"
+                value={formData.noOfDays || ""}
+                onChange={handleChange}
+                disabled={loading}
+                className="w-full pl-3 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all duration-200 mt-1"
+              >
+                <option value="" disabled>Select number of days</option>
+                <option value="90">90</option>
+                <option value="180">180</option>
+                <option value="360">360</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Calculation Summary */}
+        {formData.paidTo === "justdial" && formData.amount && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full">
+            <h4 className="text-sm font-semibold text-blue-800 mb-2">Calculation Summary</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-blue-600 block">Base Amount:</span>
+                <div className="font-medium text-blue-800">
+                  ₹{parseFloat(formData.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div>
+                <span className="text-blue-600 block">GST Number:</span>
+                <div className="font-medium text-blue-800">{formData.GST ? formData.GST.toUpperCase() : "Not provided"}</div>
+              </div>
+              <div>
+                <span className="text-blue-600 block">TDS:</span>
+                <div className="font-medium text-blue-800">
+                  ₹{parseFloat(formData.tdsAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div className="bg-blue-100 p-2 rounded">
+                <span className="text-blue-600 block font-semibold">Total (Amount - TDS):</span>
+                <div className="font-bold text-lg text-blue-900">
+                  ₹{(parseFloat(formData.amount || 0) - parseFloat(formData.tdsAmount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Location Section */}
+        {formData.paidTo !== "double tick api" && formData.paidTo !== "spa jobs" && formData.paidTo !== "spa advisor" && (
+          <>
+            <LocationSelector
+              formData={formData}
+              setFormData={setFormData}
+              isDataLoading={false}
+              centres={centres}
+              filteredBranches={filteredBranches}
+              filteredCentres={filteredCentres}
+              currentUser={currentUser}
+              accessDeniedEntries={[]}
+              setShowAccessDeniedModal={() => { }}
+              disableLocalStorage={true}
+            />
+            <SelectedLocationsDisplay
+              formData={formData}
+              setFormData={setFormData}
+              isDataLoading={false}
+              centres={centres}
+            />
+          </>
+        )}
+
+        {/* Reason */}
+        <div>
+          <label className="text-sm font-medium text-gray-700">
+            Reason *
+          </label>
+          <div className="relative mt-1">
+            <FiFileText className="absolute left-3 top-3 text-gray-400 text-sm" />
+            <textarea
+              name="reason"
+              value={formData.reason}
+              onChange={handleChange}
+              disabled={loading}
+              placeholder="Describe the advertising expense purpose..."
+              rows="3"
+              className="w-full pl-9 pr-3 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all duration-200 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
+        </div>
 
         <div className="flex justify-end gap-2 mt-4">
           <button

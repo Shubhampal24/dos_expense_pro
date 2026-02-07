@@ -268,9 +268,10 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
       const normalizedExpenses = (response || []).map(exp => ({
         ...exp,
 
-        // 🔹 match frontend naming
-        GST: exp.GST ?? exp.gst,
-        TdsAmount: exp.TdsAmount ?? exp.tdsAmount,
+        // 🔹 match frontend naming (handle both old camelCase and new lowercase from backend)
+        GST: exp.GST ?? exp.gst ?? "",
+        TdsAmount: exp.TdsAmount ?? exp.tdsAmount ?? 0,
+        noOfDays: exp.noOfDays ?? 0,  // Ensure noOfDays is always a number
 
         // 🔹 normalize bank account (table expects object)
         bankAccount: exp.bankAccount ?? (
@@ -570,8 +571,8 @@ const AddExpense = ({ currentUser: propCurrentUser, onUserUpdate }) => {
         paidTo: formData.paidTo,
         reason: formData.reason || "",
         amount: parseFloat(formData.amount),
-        GST: formData.GST || "",
-        TdsAmount: formData.TdsAmount ? parseFloat(formData.TdsAmount) : 0,
+        gst: formData.GST || "",  // Backend expects lowercase 'gst'
+        tdsAmount: formData.TdsAmount ? parseFloat(formData.TdsAmount) : 0,  // Backend expects lowercase 'tdsAmount'
         noOfDays: formData.noOfDays ? parseInt(formData.noOfDays, 10) : 0,
         verified: formData.verified,
         regionIds: formData.regionIds,
